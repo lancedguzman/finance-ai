@@ -4,6 +4,8 @@ class Transaction(models.Model):
     """Transaction model to store financial transaction details."""
     transaction_id = models.AutoField(primary_key=True)
     date = models.DateField()
+    name = models.CharField(max_length=255, null=True, 
+                            blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.ForeignKey('Category', on_delete=models.CASCADE)
 
