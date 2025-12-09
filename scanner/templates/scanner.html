@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance-AI Scanner</title>
+    <style>
+        /* CSS: Styling the Layout */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* Video Area (Scanner View) */
+        #scanner-container {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none; /* Hidden until camera starts */
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 100%;
+            display: none; /* Hidden until image is selected/captured */
+        }
+
+        .placeholder-text {
+            color: #aaa;
+        }
+
+        /* Button Group */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.2s;
+            flex: 1;
+        }
+
+        .btn-camera {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-camera:hover { background-color: #0056b3; }
+
+        .btn-upload {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-upload:hover { background-color: #1e7e34; }
+
+        /* Hidden controls */
+        #file-input { display: none; }
+        #capture-btn { 
+            display: none; 
+            margin-top: 10px; 
+            width: 100%;
+            background-color: #ffc107;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Document Scanner</h2>
+
+        <div id="scanner-container">
+            <span class="placeholder-text" id="placeholder">No image or video active</span>
+            <video id="video-feed" autoplay playsinline></video>
+            <img id="image-preview" alt="Preview">
+        </div>
+
+        <button id="capture-btn" onclick="captureImage()">Capture Photo</button>
+
+        <br><br>
+
+        <div class="button-group">
+            <button class="btn-camera" onclick="startCamera()">
+                📷 Open Scanner
+            </button>
+
+            <button class="btn-upload" onclick="triggerFileUpload()">
+                📁 Upload File
+            </button>
+        </div>
+
+        <input type="file" id="file-input" accept="image/png, image/jpeg" onchange="handleFileUpload(this)">
+    </div>
+
+    <script>
+        // JavaScript Logic
+        const video = document.getElementById('video-feed');
+        const imgPreview = document.getElementById('image-preview');
+        const placeholder = document.getElementById('placeholder');
+        const fileInput = document.getElementById('file-input');
+        const captureBtn = document.getElementById('capture-btn');
+        let stream = null;
+
+        // 1. Logic for "Open Scanner"
+        async function startCamera() {
+            // Reset views
+            imgPreview.style.display = 'none';
+            placeholder.style.display = 'none';
+            video.style.display = 'block';
+            captureBtn.style.display = 'block';
+
+            try {
+                // Request camera access
+                // facingMode: "environment" prefers the back camera on phones
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                alert("Could not access camera. Please ensure you have given permission.");
+            }
+        }
+
+        // Helper: Capture a frame from the video stream
+        function captureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw video frame to canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convert to image URL and display
+            imgPreview.src = canvas.toDataURL('image/png');
+            
+            stopCameraStream(); // Stop the video feed to save battery
+            
+            // Switch view
+            video.style.display = 'none';
+            captureBtn.style.display = 'none';
+            imgPreview.style.display = 'block';
+        }
+
+        // Helper: Stop the camera
+        function stopCameraStream() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        // 2. Logic for "Upload File"
+        function triggerFileUpload() {
+            // Stop camera if it's running
+            stopCameraStream();
+            fileInput.click();
+        }
+
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Reset views
+                    video.style.display = 'none';
+                    captureBtn.style.display = 'none';
+                    placeholder.style.display = 'none';
+                    
+                    // Show image
+                    imgPreview.src = e.target.result;
+                    imgPreview.style.display = 'block';
+                }
+                
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+</body>
+</html>
