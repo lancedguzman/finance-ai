@@ -1,84 +1,146 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    /* Modal Styles */
+    .modal-backdrop {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .modal-content {
+        background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15); animation: slideDown 0.3s ease-out;
+    }
+    @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Form & Button Styles */
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 600; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem; }
+    .btn-primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .btn-cancel { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+    .btn-primary:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+
+    /* Dashboard Layout */
+    .header-section { margin-bottom: 2rem; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .card h3 { font-size: 0.9rem; color: #777; margin-bottom: 0.5rem; }
+    .card .amount { font-size: 1.8rem; font-weight: bold; color: #333; }
+</style>
+
 <div id="app" v-cloak>
     <div class="container">
         
         <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <h1>Financial Dashboard</h1>
-                <p style="color: var(--accent-brown);">Overview for Year [[ filterKey ]]</p>
+                <p style="color: #666;">Overview for Year [[ filterKey ]]</p>
             </div>
-            
             <div>
-                <select v-model="filterKey" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1rem; font-weight: bold; color: var(--navy-contrast); cursor: pointer; background-color: white;">
-                    <option v-for="year in yearOptions" :value="year">
-                        Year [[ year ]]
-                    </option>
+                <select v-model="filterKey" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
+                    <option v-for="year in yearOptions" :value="year">Year [[ year ]]</option>
                 </select>
             </div>
         </div>
 
         <div class="cards-grid">
-            <div class="card card-balance">
-                <h3>Total Balance ([[ filterKey ]])</h3>
+            <div class="card">
+                <h3>Total Balance</h3>
                 <div class="amount">[[ formatCurrency(yearlyBalance) ]]</div>
             </div>
-            <div class="card card-income">
-                <h3 style="color: var(--text-green)">Total Income</h3>
-                <div class="amount" style="color: var(--text-green)">+[[ formatCurrency(yearlyIncome) ]]</div>
+            <div class="card">
+                <h3 style="color: #28a745;">Total Income</h3>
+                <div class="amount" style="color: #28a745;">+[[ formatCurrency(yearlyIncome) ]]</div>
             </div>
-            <div class="card card-expense">
-                <h3>Total Expenses</h3>
-                <div class="amount" style="color: var(--alert-red)">-[[ formatCurrency(yearlyExpense) ]]</div>
+            <div class="card">
+                <h3 style="color: #dc3545;">Total Expenses</h3>
+                <div class="amount" style="color: #dc3545;">-[[ formatCurrency(yearlyExpense) ]]</div>
             </div>
-            <div class="card card-savings">
-                <h3 style="color: var(--accent-brown)">Savings Goal (40%)</h3>
-                <div class="amount" style="color: var(--accent-brown)">
-                    [[ formatCurrency(yearlySavings) ]] / [[ formatCurrency(savingsGoal) ]]
+            <div class="card">
+                <h3 style="color: #fd7e14;">Savings Goal (40%)</h3>
+                <div class="amount" style="color: #fd7e14;">[[ formatCurrency(yearlySavings) ]]</div>
+                <small style="color: #999;">Target: [[ formatCurrency(savingsGoal) ]]</small>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            
+            <button class="btn-primary" style="display: flex; align-items: center; gap: 8px; background-color: #28a745;" @click="openManualAdd">
+                <span style="font-size: 1.2rem; line-height: 1;">+</span> Add Transaction
+            </button>
+
+            <button class="btn-primary" style="display: flex; align-items: center; gap: 8px;" @click="showUploadModal = true">
+                <span>📸</span> Upload Transaction
+            </button>
+        </div>
+
+        <div class="charts-section" style="margin-bottom: 2rem;">
+            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="text-align: center;">Income vs. Expense</h3>
+                    <div style="position: relative; height: 280px;"><canvas id="incomeExpenseChart"></canvas></div>
+                </div>
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="text-align: center;">Expense by Category</h3>
+                    <div style="position: relative; height: 280px;"><canvas id="categoryChart"></canvas></div>
+                </div>
+            </div>
+            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 1.5rem;">
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="text-align: center;">Monthly Summary</h3>
+                    <div style="position: relative; height: 280px;"><canvas id="monthlySummaryChart"></canvas></div>
+                </div>
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="text-align: center;">Highest Expense / Month</h3>
+                    <div style="position: relative; height: 280px;"><canvas id="highestExpenseChart"></canvas></div>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 1.5rem;">
+                <h3>Monthly Trend</h3>
+                <div style="position: relative; height: 350px;"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+
+        <div v-if="showUploadModal" class="modal-backdrop" @click.self="showUploadModal = false">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 1rem;">Upload Receipt</h3>
+                <div class="form-group">
+                    <label>1. Select Image</label>
+                    <input type="file" ref="smartFileInput" accept="image/*" @change="handleFileSelect">
+                </div>
+                <div class="form-group">
+                    <label>2. Name</label>
+                    <input type="text" v-model="uploadData.name" placeholder="e.g. Coffee">
+                </div>
+                <div class="form-group">
+                    <label>3. Category</label>
+                    <select v-model="uploadData.category">
+                        <option disabled value="">Select Category</option>
+                        <option v-for="cat in categories" :value="cat.id">[[ cat.name ]]</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" @click="showUploadModal = false">Cancel</button>
+                    <button class="btn-primary" @click="processSmartUpload" :disabled="isScanning">
+                        [[ isScanning ? 'Scanning...' : 'Next' ]]
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="charts-section" style="margin-bottom: 2rem;">
-            
-            <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                <div class="card" style="min-height: 350px;">
-                    <h3 style="margin-bottom: 1rem; text-align: center;">Income vs. Expense</h3>
-                    <div style="position: relative; height: 280px;">
-                        <canvas id="incomeExpenseChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="card" style="min-height: 350px;">
-                    <h3 style="margin-bottom: 1rem; text-align: center;">Expense by Category</h3>
-                    <div style="position: relative; height: 280px;">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div v-if="showForm" class="modal-backdrop" @click.self="showForm = false">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 1rem;">[[ newTransaction.name ? 'Verify Details' : 'Add New Transaction' ]]</h3>
                 
-                <div class="card" style="min-height: 350px;">
-                    <h3 style="margin-bottom: 1rem; text-align: center;">Monthly Summary</h3>
-                    <div style="position: relative; height: 280px;">
-                        <canvas id="monthlySummaryChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="card" style="min-height: 350px;">
-                    <h3 style="margin-bottom: 1rem; text-align: center;">Highest Expense / Month</h3>
-                    <div style="position: relative; height: 280px;">
-                        <canvas id="highestExpenseChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3 style="margin-bottom: 1rem;">Monthly Trend ([[ filterKey ]])</h3>
-                <div style="position: relative; height: 350px; width: 100%;">
-                    <canvas id="trendChart"></canvas>
+                <div class="form-group"><label>Date</label><input type="date" v-model="newTransaction.date"></div>
+                <div class="form-group"><label>Name</label><input type="text" v-model="newTransaction.name" placeholder="Transaction Name"></div>
+                <div class="form-group"><label>Category</label><select v-model="newTransaction.category"><option v-for="cat in categories" :value="cat.id">[[ cat.name ]]</option></select></div>
+                <div class="form-group"><label>Amount</label><input type="number" step="0.01" v-model="newTransaction.amount" placeholder="0.00"></div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" @click="showForm = false">Cancel</button>
+                    <button class="btn-primary" @click="submitTransaction">Save</button>
                 </div>
             </div>
         </div>
@@ -88,310 +150,190 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
 <script>
     const { createApp } = Vue;
-
     createApp({
         delimiters: ['[[', ']]'],
         data() {
-            const currentYear = new Date().getFullYear().toString();
-
             return {
-                filterKey: currentYear, 
+                filterKey: new Date().getFullYear().toString(),
                 transactions: [],
                 categories: {{ categories|safe }},
-                
-                chartInstances: {
-                    incomeExpense: null,
-                    category: null,
-                    trend: null,
-                    monthlySummary: null,   // New
-                    highestExpense: null    // New
-                }
+                showForm: false, showUploadModal: false, isScanning: false,
+                uploadData: { file: null, name: '', category: '' },
+                newTransaction: { date: '', name: '', category: '', amount: '' },
+                chartInstances: { incomeExpense: null, category: null, trend: null, monthlySummary: null, highestExpense: null }
             }
         },
         computed: {
+            filteredTransactions() { return this.transactions.filter(t => t.date.startsWith(this.filterKey)); },
             yearOptions() {
-                const years = new Set();
-                years.add(new Date().getFullYear().toString());
-                
-                this.transactions.forEach(t => {
-                    const y = t.date.split('-')[0];
-                    years.add(y);
-                });
+                const years = new Set([new Date().getFullYear().toString()]);
+                this.transactions.forEach(t => years.add(t.date.substring(0, 4)));
                 return Array.from(years).sort().reverse();
             },
-
-            filteredTransactions() {
-                return this.transactions.filter(t => t.date.startsWith(this.filterKey));
-            },
-
-            yearlyIncome() {
-                return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
-            },
-            yearlyExpense() {
-                return this.filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
-            },
-            yearlyBalance() {
-                return this.yearlyIncome - this.yearlyExpense;
-            },
-            savingsGoal() {
-                return this.yearlyIncome * 0.40;
-            },
-            yearlySavings() {
-                const savings = this.yearlyIncome - this.yearlyExpense;
-                return savings > 0 ? savings : 0;
-            }
+            yearlyIncome() { return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0); },
+            yearlyExpense() { return this.filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0); },
+            yearlyBalance() { return this.yearlyIncome - this.yearlyExpense; },
+            savingsGoal() { return this.yearlyIncome * 0.40; },
+            yearlySavings() { return Math.max(0, this.yearlyBalance); }
         },
         watch: {
-            filteredTransactions: {
-                handler() {
-                    this.$nextTick(() => {
-                        this.renderCharts();
-                    });
-                },
-                deep: true
-            }
+            filteredTransactions: { handler() { this.$nextTick(() => { this.renderCharts(); }); }, deep: true }
         },
         methods: {
-            formatCurrency(value) {
-                return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            formatCurrency(val) { return '₱' + (val || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }); },
+
+            // --- NEW: Open Manual Add ---
+            openManualAdd() {
+                this.newTransaction = { 
+                    date: new Date().toISOString().split('T')[0], 
+                    name: '', 
+                    category: '', 
+                    amount: '' 
+                };
+                this.showForm = true;
             },
-            
+
+            // --- SCANNER LOGIC ---
+            handleFileSelect(event) { this.uploadData.file = event.target.files[0]; },
+            async processSmartUpload() {
+                if (!this.uploadData.file || !this.uploadData.category) { alert("Please select image and category."); return; }
+                this.isScanning = true;
+                const formData = new FormData();
+                formData.append('receipt_image', this.uploadData.file);
+                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                try {
+                    const res = await fetch('/scanner/api/process/', { method: 'POST', headers: { 'X-CSRFToken': csrftoken }, body: formData });
+                    const result = await res.json();
+                    if (res.ok) {
+                        this.showUploadModal = false;
+                        this.newTransaction = {
+                            date: result.data.date || new Date().toISOString().split('T')[0],
+                            name: this.uploadData.name || "Scanned Receipt",
+                            category: this.uploadData.category,
+                            amount: result.data.amount || ''
+                        };
+                        this.showForm = true;
+                        this.uploadData = { file: null, name: '', category: '' };
+                        if(this.$refs.smartFileInput) this.$refs.smartFileInput.value = '';
+                    } else { alert(result.error || "Scan failed."); }
+                } catch (e) { alert("Connection error."); } 
+                finally { this.isScanning = false; }
+            },
+
+            // --- SAVE LOGIC ---
+            async submitTransaction() {
+                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                try {
+                    const res = await fetch('/add-transaction/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify(this.newTransaction) });
+                    if (res.ok) { alert('Saved!'); this.showForm = false; this.fetchTransactions(); } else { alert("Error."); }
+                } catch (e) { console.error(e); }
+            },
+            async fetchTransactions() {
+                try { const res = await fetch('/api/transactions/'); this.transactions = await res.json(); } catch (e) { console.error(e); }
+            },
+
+            // --- CHARTS LOGIC ---
             renderCharts() {
                 this.renderIncomeVsExpense();
                 this.renderCategoryChart();
-                this.renderMonthlySummary();   // New
-                this.renderHighestExpense();   // New
                 this.renderTrendChart();
+                this.renderMonthlySummary();
+                this.renderHighestExpense();
             },
-
             renderIncomeVsExpense() {
-                const ctx = document.getElementById('incomeExpenseChart');
-                if (!ctx) return;
-                
+                const ctx = document.getElementById('incomeExpenseChart'); if (!ctx) return;
                 if (this.chartInstances.incomeExpense) this.chartInstances.incomeExpense.destroy();
-
                 this.chartInstances.incomeExpense = new Chart(ctx, {
                     type: 'doughnut',
-                    data: {
-                        labels: ['Income', 'Expense'],
-                        datasets: [{
-                            data: [this.yearlyIncome, this.yearlyExpense],
-                            backgroundColor: ['#2E865F', '#FF0000'], 
-                            borderWidth: 1
-                        }]
-                    },
+                    data: { labels: ['Income', 'Expense'], datasets: [{ data: [this.yearlyIncome, this.yearlyExpense], backgroundColor: ['#28a745', '#dc3545'] }] },
                     options: { responsive: true, maintainAspectRatio: false }
                 });
             },
-
             renderCategoryChart() {
-                const ctx = document.getElementById('categoryChart');
-                if (!ctx) return;
+                const ctx = document.getElementById('categoryChart'); if (!ctx) return;
                 if (this.chartInstances.category) this.chartInstances.category.destroy();
-
                 const expenses = this.filteredTransactions.filter(t => t.type === 'EXPENSE');
-                const categoryTotals = {};
-                
-                expenses.forEach(t => {
-                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-                });
-
+                const catTotals = {}; expenses.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
                 this.chartInstances.category = new Chart(ctx, {
                     type: 'pie',
-                    data: {
-                        labels: Object.keys(categoryTotals),
-                        datasets: [{
-                            data: Object.values(categoryTotals),
-                            backgroundColor: ['#288cfa', '#8d6e63', '#e0e0e0', '#f0ad4e', '#5bc0de', '#003366'],
-                        }]
-                    },
+                    data: { labels: Object.keys(catTotals), datasets: [{ data: Object.values(catTotals), backgroundColor: ['#007bff', '#6610f2', '#6f42c1', '#e83e8c', '#fd7e14'] }] },
                     options: { responsive: true, maintainAspectRatio: false }
                 });
             },
-
-            // --- NEW: Summary per month (Income, Expense, Savings) ---
-            renderMonthlySummary() {
-                const ctx = document.getElementById('monthlySummaryChart');
-                if (!ctx) return;
-                if (this.chartInstances.monthlySummary) this.chartInstances.monthlySummary.destroy();
-
-                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const incomeData = new Array(12).fill(0);
-                const expenseData = new Array(12).fill(0);
-
+            renderTrendChart() {
+                const ctx = document.getElementById('trendChart'); if (!ctx) return;
+                if (this.chartInstances.trend) this.chartInstances.trend.destroy();
+                const incomeData = new Array(12).fill(0); const expenseData = new Array(12).fill(0);
                 this.filteredTransactions.forEach(t => {
-                    const monthIndex = parseInt(t.date.split('-')[1]) - 1;
-                    if (t.type === 'INCOME') incomeData[monthIndex] += t.amount;
-                    else expenseData[monthIndex] += t.amount;
+                    const m = parseInt(t.date.split('-')[1]) - 1;
+                    if (t.type === 'INCOME') incomeData[m] += t.amount; else expenseData[m] += t.amount;
                 });
-
-                // Calculate Savings (Income - Expense)
-                const savingsData = incomeData.map((inc, i) => {
-                    const val = inc - expenseData[i];
-                    return val > 0 ? val : 0; // Show 0 if negative savings (deficit), or remove check to show deficit
+                this.chartInstances.trend = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [
+                        { label: 'Income', data: incomeData, borderColor: '#28a745', fill: false },
+                        { label: 'Expense', data: expenseData, borderColor: '#dc3545', fill: false }
+                    ]},
+                    options: { responsive: true, maintainAspectRatio: false }
                 });
-
+            },
+            renderMonthlySummary() {
+                const ctx = document.getElementById('monthlySummaryChart'); if (!ctx) return;
+                if (this.chartInstances.monthlySummary) this.chartInstances.monthlySummary.destroy();
+                const incomeData = new Array(12).fill(0); const expenseData = new Array(12).fill(0);
+                this.filteredTransactions.forEach(t => {
+                    const m = parseInt(t.date.split('-')[1]) - 1;
+                    if (t.type === 'INCOME') incomeData[m] += t.amount; else expenseData[m] += t.amount;
+                });
+                const savingsData = incomeData.map((inc, i) => Math.max(0, inc - expenseData[i]));
                 this.chartInstances.monthlySummary = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: labels,
+                        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
                         datasets: [
-                            {
-                                label: 'Income',
-                                data: incomeData,
-                                backgroundColor: '#2E865F'
-                            },
-                            {
-                                label: 'Expense',
-                                data: expenseData,
-                                backgroundColor: '#FF0000'
-                            },
-                            {
-                                label: 'Savings',
-                                data: savingsData,
-                                backgroundColor: '#8d6e63'
-                            }
+                            { label: 'Income', data: incomeData, backgroundColor: '#28a745' },
+                            { label: 'Expense', data: expenseData, backgroundColor: '#dc3545' },
+                            { label: 'Savings', data: savingsData, backgroundColor: '#fd7e14' }
                         ]
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false }
                 });
             },
-
-            // --- NEW: Highest Expense Category per Month ---
             renderHighestExpense() {
-                const ctx = document.getElementById('highestExpenseChart');
-                if (!ctx) return;
+                const ctx = document.getElementById('highestExpenseChart'); if (!ctx) return;
                 if (this.chartInstances.highestExpense) this.chartInstances.highestExpense.destroy();
-
-                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                
-                // Track max expense and its category name per month
-                // Structure: [{ max: 0, category: '' }, { max: 0, category: '' } ...]
                 const monthlyMax = Array.from({ length: 12 }, () => ({ max: 0, category: 'N/A' }));
-                
-                // Helper to aggregate expenses per month first
                 const monthlyCategoryTotals = Array.from({ length: 12 }, () => ({}));
-
-                // 1. Sum up expenses by category per month
                 this.filteredTransactions.forEach(t => {
                     if (t.type === 'EXPENSE') {
-                        const monthIndex = parseInt(t.date.split('-')[1]) - 1;
-                        if (!monthlyCategoryTotals[monthIndex][t.category]) {
-                            monthlyCategoryTotals[monthIndex][t.category] = 0;
-                        }
-                        monthlyCategoryTotals[monthIndex][t.category] += t.amount;
+                        const m = parseInt(t.date.split('-')[1]) - 1;
+                        monthlyCategoryTotals[m][t.category] = (monthlyCategoryTotals[m][t.category] || 0) + t.amount;
                     }
                 });
-
-                // 2. Find max for each month
-                monthlyCategoryTotals.forEach((categories, monthIndex) => {
-                    let maxAmount = 0;
-                    let maxCat = 'N/A';
-                    
-                    for (const [cat, amount] of Object.entries(categories)) {
-                        if (amount > maxAmount) {
-                            maxAmount = amount;
-                            maxCat = cat;
-                        }
+                monthlyCategoryTotals.forEach((cats, m) => {
+                    for (const [cat, amt] of Object.entries(cats)) {
+                        if (amt > monthlyMax[m].max) monthlyMax[m] = { max: amt, category: cat };
                     }
-                    monthlyMax[monthIndex] = { max: maxAmount, category: maxCat };
                 });
-
-                const dataValues = monthlyMax.map(m => m.max);
-                const categoryLabels = monthlyMax.map(m => m.category);
-
                 this.chartInstances.highestExpense = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Highest Expense Amount',
-                            data: dataValues,
-                            backgroundColor: '#288cfa'
-                        }]
+                        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+                        datasets: [{ label: 'Highest Expense', data: monthlyMax.map(m => m.max), backgroundColor: '#007bff' }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    // Custom tooltip to show the Category Name
-                                    afterLabel: function(context) {
-                                        const index = context.dataIndex;
-                                        return 'Category: ' + categoryLabels[index];
-                                    }
-                                }
-                            }
-                        },
-                        scales: { y: { beginAtZero: true } }
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { tooltip: { callbacks: { afterLabel: (c) => 'Category: ' + monthlyMax[c.dataIndex].category } } }
                     }
                 });
-            },
-
-            renderTrendChart() {
-                const ctx = document.getElementById('trendChart');
-                if (!ctx) return;
-                if (this.chartInstances.trend) this.chartInstances.trend.destroy();
-
-                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const incomeData = new Array(12).fill(0);
-                const expenseData = new Array(12).fill(0);
-
-                this.filteredTransactions.forEach(t => {
-                    const monthIndex = parseInt(t.date.split('-')[1]) - 1; 
-                    if (t.type === 'INCOME') incomeData[monthIndex] += t.amount;
-                    else expenseData[monthIndex] += t.amount;
-                });
-
-                this.chartInstances.trend = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Income',
-                                data: incomeData,
-                                borderColor: '#2E865F',
-                                backgroundColor: 'rgba(46, 134, 95, 0.1)',
-                                fill: true,
-                                tension: 0.3
-                            },
-                            {
-                                label: 'Expense',
-                                data: expenseData,
-                                borderColor: '#FF0000',
-                                backgroundColor: 'rgba(255, 0, 0, 0.1)',
-                                fill: true,
-                                tension: 0.3
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true } }
-                    }
-                });
-            },
-
-            async fetchTransactions() {
-                try {
-                    const response = await fetch('/api/transactions/');
-                    const data = await response.json();
-                    this.transactions = data;
-                } catch (error) { console.error("Error loading transactions:", error); }
             }
         },
-        mounted() {
-            this.fetchTransactions();
-        }
+        mounted() { this.fetchTransactions(); }
     }).mount('#app');
 </script>
 {% endblock %}
