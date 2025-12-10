@@ -41,8 +41,8 @@
         </div>
 
         <div class="charts-section" style="margin-bottom: 2rem;">
+            
             <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-                
                 <div class="card" style="min-height: 350px;">
                     <h3 style="margin-bottom: 1rem; text-align: center;">Income vs. Expense</h3>
                     <div style="position: relative; height: 280px;">
@@ -58,6 +58,23 @@
                 </div>
             </div>
 
+            <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="margin-bottom: 1rem; text-align: center;">Monthly Summary</h3>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="monthlySummaryChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="margin-bottom: 1rem; text-align: center;">Highest Expense / Month</h3>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="highestExpenseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <h3 style="margin-bottom: 1rem;">Monthly Trend ([[ filterKey ]])</h3>
                 <div style="position: relative; height: 350px; width: 100%;">
@@ -66,7 +83,7 @@
             </div>
         </div>
 
-        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -80,39 +97,35 @@
             const currentYear = new Date().getFullYear().toString();
 
             return {
-                filterKey: currentYear, // Now stores "YYYY"
+                filterKey: currentYear, 
                 transactions: [],
-                categories: {{ categories|safe }}, // Ensure views.py passes this!
+                categories: {{ categories|safe }},
                 
                 chartInstances: {
                     incomeExpense: null,
                     category: null,
-                    trend: null
+                    trend: null,
+                    monthlySummary: null,   // New
+                    highestExpense: null    // New
                 }
             }
         },
         computed: {
-            // 1. Generate Year Options (Current Year + any years found in data)
             yearOptions() {
                 const years = new Set();
-                years.add(new Date().getFullYear().toString()); // Always add current year
+                years.add(new Date().getFullYear().toString());
                 
                 this.transactions.forEach(t => {
                     const y = t.date.split('-')[0];
                     years.add(y);
                 });
-                
-                // Sort descending (2025, 2024, 2023...)
                 return Array.from(years).sort().reverse();
             },
 
-            // 2. Filter Transactions by YEAR
             filteredTransactions() {
-                // Returns transactions where date starts with "2025", etc.
                 return this.transactions.filter(t => t.date.startsWith(this.filterKey));
             },
 
-            // 3. Yearly Calculations
             yearlyIncome() {
                 return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
             },
@@ -145,10 +158,11 @@
                 return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             },
             
-            // --- CHART LOGIC ---
             renderCharts() {
                 this.renderIncomeVsExpense();
                 this.renderCategoryChart();
+                this.renderMonthlySummary();   // New
+                this.renderHighestExpense();   // New
                 this.renderTrendChart();
             },
 
@@ -197,23 +211,141 @@
                 });
             },
 
+            // --- NEW: Summary per month (Income, Expense, Savings) ---
+            renderMonthlySummary() {
+                const ctx = document.getElementById('monthlySummaryChart');
+                if (!ctx) return;
+                if (this.chartInstances.monthlySummary) this.chartInstances.monthlySummary.destroy();
+
+                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const incomeData = new Array(12).fill(0);
+                const expenseData = new Array(12).fill(0);
+
+                this.filteredTransactions.forEach(t => {
+                    const monthIndex = parseInt(t.date.split('-')[1]) - 1;
+                    if (t.type === 'INCOME') incomeData[monthIndex] += t.amount;
+                    else expenseData[monthIndex] += t.amount;
+                });
+
+                // Calculate Savings (Income - Expense)
+                const savingsData = incomeData.map((inc, i) => {
+                    const val = inc - expenseData[i];
+                    return val > 0 ? val : 0; // Show 0 if negative savings (deficit), or remove check to show deficit
+                });
+
+                this.chartInstances.monthlySummary = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Income',
+                                data: incomeData,
+                                backgroundColor: '#2E865F'
+                            },
+                            {
+                                label: 'Expense',
+                                data: expenseData,
+                                backgroundColor: '#FF0000'
+                            },
+                            {
+                                label: 'Savings',
+                                data: savingsData,
+                                backgroundColor: '#8d6e63'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            },
+
+            // --- NEW: Highest Expense Category per Month ---
+            renderHighestExpense() {
+                const ctx = document.getElementById('highestExpenseChart');
+                if (!ctx) return;
+                if (this.chartInstances.highestExpense) this.chartInstances.highestExpense.destroy();
+
+                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                
+                // Track max expense and its category name per month
+                // Structure: [{ max: 0, category: '' }, { max: 0, category: '' } ...]
+                const monthlyMax = Array.from({ length: 12 }, () => ({ max: 0, category: 'N/A' }));
+                
+                // Helper to aggregate expenses per month first
+                const monthlyCategoryTotals = Array.from({ length: 12 }, () => ({}));
+
+                // 1. Sum up expenses by category per month
+                this.filteredTransactions.forEach(t => {
+                    if (t.type === 'EXPENSE') {
+                        const monthIndex = parseInt(t.date.split('-')[1]) - 1;
+                        if (!monthlyCategoryTotals[monthIndex][t.category]) {
+                            monthlyCategoryTotals[monthIndex][t.category] = 0;
+                        }
+                        monthlyCategoryTotals[monthIndex][t.category] += t.amount;
+                    }
+                });
+
+                // 2. Find max for each month
+                monthlyCategoryTotals.forEach((categories, monthIndex) => {
+                    let maxAmount = 0;
+                    let maxCat = 'N/A';
+                    
+                    for (const [cat, amount] of Object.entries(categories)) {
+                        if (amount > maxAmount) {
+                            maxAmount = amount;
+                            maxCat = cat;
+                        }
+                    }
+                    monthlyMax[monthIndex] = { max: maxAmount, category: maxCat };
+                });
+
+                const dataValues = monthlyMax.map(m => m.max);
+                const categoryLabels = monthlyMax.map(m => m.category);
+
+                this.chartInstances.highestExpense = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Highest Expense Amount',
+                            data: dataValues,
+                            backgroundColor: '#288cfa'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    // Custom tooltip to show the Category Name
+                                    afterLabel: function(context) {
+                                        const index = context.dataIndex;
+                                        return 'Category: ' + categoryLabels[index];
+                                    }
+                                }
+                            }
+                        },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            },
+
             renderTrendChart() {
                 const ctx = document.getElementById('trendChart');
                 if (!ctx) return;
                 if (this.chartInstances.trend) this.chartInstances.trend.destroy();
 
-                // 1. Setup Labels for Months
                 const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                
-                // 2. Initialize Data Buckets (12 zeros)
                 const incomeData = new Array(12).fill(0);
                 const expenseData = new Array(12).fill(0);
 
-                // 3. Aggregate Data by Month
                 this.filteredTransactions.forEach(t => {
-                    // Extract month from "2025-05-20" -> "05" -> index 4
                     const monthIndex = parseInt(t.date.split('-')[1]) - 1; 
-                    
                     if (t.type === 'INCOME') incomeData[monthIndex] += t.amount;
                     else expenseData[monthIndex] += t.amount;
                 });
@@ -244,9 +376,7 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
+                        scales: { y: { beginAtZero: true } }
                     }
                 });
             },
