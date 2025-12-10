@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance-AI</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        /* --- CSS VARIABLES --- */
+        :root {
+            --primary-blue: #288cfa;
+            --dark-blue: #103766;
+            --bg-green: #C6F4D6;
+            --text-green: #2E865F;
+            --bg-body: #F5F5F5;
+            --text-main: #333333;
+            --card-white: #FFFFFF;
+            --alert-red: #FF0000;
+            --navy-contrast: #003366;
+            --accent-brown: #8d6e63;
+            --bg-beige: #d7ccc8;
+        }
+        /* --- GLOBAL RESET --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); }
+
+        /* --- NAVIGATION --- */
+        nav { background-color: var(--dark-blue); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
+        .nav-links { display: flex; align-items: center; }
+        .nav-links a, .nav-links button { color: #ccc; text-decoration: none; margin-left: 20px; transition: color 0.3s; background: none; border: none; font-size: 1rem; cursor: pointer; }
+        .nav-links a:hover, .nav-links button:hover { color: var(--primary-blue); }
+
+        /* --- LAYOUT --- */
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        
+        /* --- UTILITIES --- */
+        .card { background: var(--card-white); padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .btn-primary { background-color: var(--primary-blue); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; width: 100%; }
+        .btn-primary:hover { background-color: var(--dark-blue); }
+        
+        /* Form styling helpers for Login/Register */
+        .auth-container { max-width: 400px; margin: 4rem auto; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--navy-contrast); font-weight: 500; }
+        .helptext { font-size: 0.8rem; color: #666; display: block; margin-top: 4px;}
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">Finance Tracker AI</div>
+        <div class="nav-links">
+            {% if user.is_authenticated %}
+                <a href="{% url 'tracker:index' %}">Dashboard</a>
+                <a href="{% url 'scanner:scanner' %}">Scanner</a>
+                <a href="#">Telegram</a>
+                <a href="{% url 'user_management:profile' %}">Profile</a>
+                
+                <form action="{% url 'user_management:logout' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a href="{% url 'user_management:login' %}">Login</a>
+                <a href="{% url 'user_management:register' %}">Register</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    {% block content %}
+    {% endblock %}
+
+    {% block scripts %}
+    {% endblock %}
+
+</body>
+</html>
