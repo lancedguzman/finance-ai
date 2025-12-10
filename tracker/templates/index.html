@@ -11,50 +11,76 @@
 
         <div class="cards-grid">
             <div class="card card-balance">
-                <h3>Total Balance</h3>
-                <div class="amount">₱12,450.00</div>
+                <h3>Total Balance (Month)</h3>
+                <div class="amount">[[ formatCurrency(monthlyBalance) ]]</div>
             </div>
             <div class="card card-income">
                 <h3 style="color: var(--text-green)">Monthly Income</h3>
-                <div class="amount" style="color: var(--text-green)">+₱4,200.00</div>
+                <div class="amount" style="color: var(--text-green)">+[[ formatCurrency(monthlyIncome) ]]</div>
             </div>
             <div class="card card-expense">
                 <h3>Monthly Expenses</h3>
-                <div class="amount" style="color: var(--alert-red)">-₱1,850.00</div>
+                <div class="amount" style="color: var(--alert-red)">-[[ formatCurrency(monthlyExpense) ]]</div>
             </div>
             <div class="card card-savings">
-                <h3 style="color: var(--accent-brown)">Savings Goal</h3>
-                <div class="amount" style="color: var(--accent-brown)">₱5,000 / ₱10k</div>
+                <h3 style="color: var(--accent-brown)">Savings Goal (40%)</h3>
+                <div class="amount" style="color: var(--accent-brown)">
+                    [[ formatCurrency(monthlySavings) ]] / [[ formatCurrency(savingsGoal) ]]
+                </div>
             </div>
         </div>
 
         <div class="recent-transactions">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2 class="section-title">Transactions ([[ targetMonth ]])</h2>
-                <button class="btn-primary" @click="addNew">+ Add Transaction</button>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-primary" style="background-color: var(--accent-brown);" @click="toggleCategoryModal">
+                        + Add Category
+                    </button>
+                    <button class="btn-primary" @click="addNew">+ Add Transaction</button>
+                </div>
             </div>
 
             <div v-if="showForm" class="modal-backdrop" @click.self="showForm = false">
                 <div class="modal-content">
                     <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Transaction</h3>
-                    
                     <div class="form-group">
                         <input type="date" v-model="newTransaction.date" required>
                         <input type="text" v-model="newTransaction.name" placeholder="Name">
-                        
                         <select v-model="newTransaction.category">
                             <option disabled value="">Select Category</option>
                             <option v-for="cat in categories" :value="cat.id">
                                 [[ cat.name ]] ([[ cat.type ]])
                             </option>
                         </select>
-                        
                         <input type="number" step="0.01" v-model="newTransaction.amount" placeholder="Amount (₱)">
                     </div>
-
                     <div class="modal-actions">
                         <button class="btn-cancel" @click="showForm = false">Cancel</button>
                         <button class="btn-primary" @click="submitTransaction">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="showCategoryForm" class="modal-backdrop" @click.self="showCategoryForm = false">
+                <div class="modal-content">
+                    <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Category</h3>
+                    
+                    <div class="form-group">
+                        <label style="font-size: 0.9rem; color: #666;">Category Name</label>
+                        <input type="text" v-model="newCategory.name" placeholder="e.g. Groceries, Crypto, Bonus">
+                        
+                        <label style="font-size: 0.9rem; color: #666;">Type</label>
+                        <select v-model="newCategory.type">
+                            <option value="EXPENSE">Expense</option>
+                            <option value="INCOME">Income</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-cancel" @click="showCategoryForm = false">Cancel</button>
+                        <button class="btn-primary" @click="submitCategory">Create Category</button>
                     </div>
                 </div>
             </div>
@@ -74,17 +100,14 @@
                         <td>[[ formatDate(t.date) ]]</td>
                         <td>[[ t.name ]]</td>
                         <td>[[ t.category ]]</td>
-                        
                         <td :class="t.type === 'INCOME' ? 'money-plus' : 'money-minus'" style="text-align: right;">
                             [[ t.type === 'INCOME' ? '+' : '-' ]]₱[[ t.amount.toFixed(2) ]]
                         </td>
-
                         <td style="text-align: center;">
                             <button class="action-btn btn-edit" @click="editTransaction(t.id)">Edit</button>
                             <button class="action-btn btn-delete" @click="deleteTransaction(t.id)">Delete</button>
                         </td>
                     </tr>
-
                     <tr v-if="filteredTransactions.length === 0">
                         <td colspan="5" class="no-data">No transactions found for [[ targetMonth ]]</td>
                     </tr>
@@ -103,86 +126,129 @@
         delimiters: ['[[', ']]'],
         data() {
             const now = new Date();
-            const displayDate = now.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long'
-            });
-
+            const displayDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const filterDate = `${year}-${month}`; 
 
             return {
-                showForm: false,
+                showForm: false,        // Toggle for Transaction Modal
+                showCategoryForm: false, // Toggle for Category Modal (NEW)
                 targetMonth: displayDate,
                 filterKey: filterDate,
                 transactions: [],
-                // Ensure this template tag is rendered by Django before Vue sees it
                 categories: {{ categories|safe }},
+                
+                // Transaction Form Data
                 newTransaction: {
                     date: new Date().toISOString().split('T')[0],
                     name: '',
                     category: '',
                     amount: ''
+                },
+
+                // Category Form Data (NEW)
+                newCategory: {
+                    name: '',
+                    type: 'EXPENSE' // Default to expense
                 }
             }
         },
         computed: {
             filteredTransactions() {
                 return this.transactions.filter(t => t.date.startsWith(this.filterKey));
+            },
+            monthlyIncome() {
+                return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
+            },
+            monthlyExpense() {
+                return this.filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
+            },
+            monthlyBalance() {
+                return this.monthlyIncome - this.monthlyExpense;
+            },
+            savingsGoal() {
+                return this.monthlyIncome * 0.40;
+            },
+            monthlySavings() {
+                const savings = this.monthlyIncome - this.monthlyExpense;
+                return savings > 0 ? savings : 0;
             }
         },
         methods: {
             addNew() {
                 this.showForm = !this.showForm;
             },
+            toggleCategoryModal() {
+                this.showCategoryForm = !this.showCategoryForm;
+            },
             formatDate(dateStr) {
                 const options = { year: 'numeric', month: 'short', day: '2-digit' };
                 return new Date(dateStr).toLocaleDateString('en-US', options);
             },
-            async deleteTransaction(id) {
-                if(confirm("Are you sure you want to delete this transaction?")) {
-                    const csrftoken = document.cookie.split('; ')
-                        .find(row => row.startsWith('csrftoken='))
-                        ?.split('=')[1];
-
-                    try {
-                        const response = await fetch(`/delete-transaction/${id}/`, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-CSRFToken': csrftoken,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-
-                        if (response.ok) {
-                            this.transactions = this.transactions.filter(t => t.id !== id);
-                            console.log("Transaction deleted from database");
-                        } else {
-                            alert("Failed to delete transaction.");
-                        }
-                    } catch (error) {
-                        console.error("Error deleting:", error);
-                    }
-                }
+            formatCurrency(value) {
+                return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             },
-            async submitTransaction() {
-                const csrftoken = document.cookie.split('; ')
-                    .find(row => row.startsWith('csrftoken='))
-                    ?.split('=')[1];
-
+            
+            // --- SUBMIT CATEGORY (NEW) ---
+            async submitCategory() {
+                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                
                 try {
-                    const response = await fetch('/add-transaction/', {
+                    const response = await fetch('/add-category/', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': csrftoken
                         },
-                        body: JSON.stringify(this.newTransaction)
+                        body: JSON.stringify(this.newCategory)
                     });
 
                     const data = await response.json();
 
+                    if (response.ok) {
+                        alert('Category Created!');
+                        // Add the new category to the local list so it appears in the dropdown immediately
+                        this.categories.push(data.category);
+                        
+                        // Reset form and close
+                        this.newCategory.name = '';
+                        this.newCategory.type = 'EXPENSE';
+                        this.showCategoryForm = false;
+                    } else {
+                        alert(data.error || "Error creating category");
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+
+            // --- EXISTING METHODS ---
+            async deleteTransaction(id) {
+                if(confirm("Are you sure you want to delete this transaction?")) {
+                    const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                    try {
+                        const response = await fetch(`/delete-transaction/${id}/`, {
+                            method: 'DELETE',
+                            headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' }
+                        });
+                        if (response.ok) {
+                            this.transactions = this.transactions.filter(t => t.id !== id);
+                        } else {
+                            alert("Failed to delete transaction.");
+                        }
+                    } catch (error) { console.error("Error deleting:", error); }
+                }
+            },
+            async submitTransaction() {
+                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                try {
+                    const response = await fetch('/add-transaction/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                        body: JSON.stringify(this.newTransaction)
+                    });
+                    const data = await response.json();
                     if (response.ok) {
                         alert('Transaction Saved!');
                         this.fetchTransactions();
@@ -191,20 +257,16 @@
                         this.showForm = false; 
                     } else {
                         console.error("Errors:", data.errors);
-                        alert("Error saving transaction. Check console.");
+                        alert("Error saving transaction.");
                     }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
+                } catch (error) { console.error('Error:', error); }
             },
             async fetchTransactions() {
                 try {
                     const response = await fetch('/api/transactions/');
                     const data = await response.json();
                     this.transactions = data;
-                } catch (error) {
-                    console.error("Error loading transactions:", error);
-                }
+                } catch (error) { console.error("Error loading transactions:", error); }
             }
         },
         mounted() {

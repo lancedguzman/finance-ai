@@ -1,5 +1,6 @@
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import JsonResponse
+from django.db import IntegrityError
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Category, Transaction
@@ -67,6 +68,42 @@ def delete_transaction(request, id):
             return JsonResponse({'message': 'Deleted successfully'})
         except Transaction.DoesNotExist:
             return JsonResponse({'error': 'Transaction not found'}, status=404)
+    
+    return JsonResponse({'error': 'Invalid method'}, status=405)
+
+
+@login_required(login_url='user_management:login')
+def add_category(request):
+    """View to add a new category via JSON."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            cat_type = data.get('type')
+
+            if not name or not cat_type:
+                return JsonResponse({'error': 'Name and Type are required'}, status=400)
+
+            # Create the category linked to the user
+            category = Category.objects.create(
+                user=request.user,
+                name=name,
+                type=cat_type
+            )
+            
+            # Return the new category data so Vue can update the list immediately
+            return JsonResponse({
+                'message': 'Success',
+                'category': {
+                    'id': category.id,
+                    'name': category.name,
+                    'type': category.type
+                }
+            })
+        except IntegrityError:
+            return JsonResponse({'error': 'Category with this name already exists.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
