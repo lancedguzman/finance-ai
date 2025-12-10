@@ -1,381 +1,215 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance Tracker Dashboard</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+{% extends 'base.html' %}
 
-    <style>
-        /* --- CSS VARIABLES --- */
-        :root {
-            --primary-blue: #288cfa;
-            --dark-blue: #103766;
-            --bg-green: #C6F4D6;
-            --text-green: #2E865F;
-            --bg-body: #F5F5F5;
-            --text-main: #333333;
-            --card-white: #FFFFFF;
-            --alert-red: #FF0000;
-            --navy-contrast: #003366;
-            --accent-brown: #8d6e63;
-            --bg-beige: #d7ccc8;
-        }
-        /* --- MODAL STYLES --- */
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-            backdrop-filter: blur(5px); /* Blurs the background */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000; /* Ensures it sits on top of everything */
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px; /* Limits width for a "small container" look */
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            animation: fadeIn 0.3s ease;
-        }
-
-        /* Make inputs look better stacked in the modal */
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .form-group input, 
-        .form-group select {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-            width: 100%;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-
-        .btn-cancel {
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-cancel:hover { background-color: #5a6268; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* --- GLOBAL RESET --- */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-main); }
-
-        /* --- NAVIGATION --- */
-        nav { background-color: var(--dark-blue); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
-        .nav-links a { color: #ccc; text-decoration: none; margin-left: 20px; transition: color 0.3s; }
-        .nav-links a:hover { color: var(--primary-blue); }
-
-        /* --- LAYOUT --- */
-        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        .header-section { margin-bottom: 2rem; }
-        .header-section h1 { color: var(--navy-contrast); }
-
-        /* --- DASHBOARD CARDS --- */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-        .card { background: var(--card-white); padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid transparent; }
-        .card-balance { border-top-color: var(--primary-blue); }
-        .card-income { background-color: var(--bg-green); border-top-color: var(--text-green); }
-        .card-expense { border-top-color: var(--alert-red); }
-        .card-savings { background-color: var(--bg-beige); border-top-color: var(--accent-brown); }
-        .card h3 { font-size: 0.9rem; text-transform: uppercase; color: #666; margin-bottom: 0.5rem; }
-        .card .amount { font-size: 1.8rem; font-weight: bold; color: var(--text-main); }
-
-        /* --- TRANSACTIONS TABLE --- */
-        .recent-transactions { background: var(--card-white); padding: 2rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .section-title { margin-bottom: 1rem; color: var(--dark-blue); border-bottom: 2px solid var(--bg-body); padding-bottom: 0.5rem; }
+{% block content %}
+<div id="app">
+    <div class="container">
         
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th { text-align: left; padding: 1rem; color: var(--navy-contrast); background-color: #f8f9fa; }
-        td { padding: 1rem; border-bottom: 1px solid #eee; vertical-align: middle; }
+        <div class="header-section">
+            <h1>Welcome Back, User</h1>
+            <p style="color: var(--accent-brown);">Here is your financial overview for [[ targetMonth ]].</p>
+        </div>
 
-        .money-plus { color: var(--text-green); font-weight: bold; }
-        .money-minus { color: var(--alert-red); font-weight: bold; }
-
-        .btn-primary { background-color: var(--primary-blue); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
-        .btn-primary:hover { background-color: var(--dark-blue); }
-
-        /* --- NEW BUTTON STYLES --- */
-        .action-btn {
-            padding: 6px 12px;
-            margin-right: 5px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            color: white;
-        }
-        .btn-edit { background-color: #f0ad4e; } /* Orange/Yellow */
-        .btn-edit:hover { background-color: #ec971f; }
-        
-        .btn-delete { background-color: var(--alert-red); }
-        .btn-delete:hover { background-color: #c9302c; }
-
-        /* Empty state helper */
-        .no-data { text-align: center; padding: 2rem; color: #777; font-style: italic; }
-    </style>
-</head>
-<body>
-
-    <div id="app">
-        <nav>
-            <div class="logo">Finance Tracker AI</div>
-            <div class="nav-links">
-                <a href="#">Dashboard</a>
-                <a href="#">Wallet</a>
-                <a href="#">Settings</a>
+        <div class="cards-grid">
+            <div class="card card-balance">
+                <h3>Total Balance</h3>
+                <div class="amount">₱12,450.00</div>
             </div>
-        </nav>
-
-        <div class="container">
-            
-            <div class="header-section">
-                <h1>Welcome Back, User</h1>
-                <p style="color: var(--accent-brown);">Here is your financial overview for [[ targetMonth ]].</p>
+            <div class="card card-income">
+                <h3 style="color: var(--text-green)">Monthly Income</h3>
+                <div class="amount" style="color: var(--text-green)">+₱4,200.00</div>
             </div>
-
-            <div class="cards-grid">
-                <div class="card card-balance">
-                    <h3>Total Balance</h3>
-                    <div class="amount">₱12,450.00</div>
-                </div>
-                <div class="card card-income">
-                    <h3 style="color: var(--text-green)">Monthly Income</h3>
-                    <div class="amount" style="color: var(--text-green)">+₱4,200.00</div>
-                </div>
-                <div class="card card-expense">
-                    <h3>Monthly Expenses</h3>
-                    <div class="amount" style="color: var(--alert-red)">-₱1,850.00</div>
-                </div>
-                <div class="card card-savings">
-                    <h3 style="color: var(--accent-brown)">Savings Goal</h3>
-                    <div class="amount" style="color: var(--accent-brown)">₱5,000 / ₱10k</div>
-                </div>
+            <div class="card card-expense">
+                <h3>Monthly Expenses</h3>
+                <div class="amount" style="color: var(--alert-red)">-₱1,850.00</div>
             </div>
-
-            <div class="recent-transactions">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2 class="section-title">Transactions ([[ targetMonth ]])</h2>
-                    <button class="btn-primary" @click="addNew">+ Add Transaction</button>
-                </div>
-
-                <div v-if="showForm" class="modal-backdrop" @click.self="showForm = false">
-                    <div class="modal-content">
-                        <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Transaction</h3>
-                        
-                        <div class="form-group">
-                            <input type="date" v-model="newTransaction.date" required>
-                            <input type="text" v-model="newTransaction.name" placeholder="Name">
-                            
-                            <select v-model="newTransaction.category">
-                                <option disabled value="">Select Category</option>
-                                <option v-for="cat in categories" :value="cat.id">
-                                    [[ cat.name ]] ([[ cat.type ]])
-                                </option>
-                            </select>
-                            
-                            <input type="number" step="0.01" v-model="newTransaction.amount" placeholder="Amount (₱)">
-                        </div>
-
-                        <div class="modal-actions">
-                            <button class="btn-cancel" @click="showForm = false">Cancel</button>
-                            <button class="btn-primary" @click="submitTransaction">Save</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th style="text-align: right;">Amount</th>
-                            <th style="text-align: center;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="t in filteredTransactions" :key="t.id">
-                            <td>[[ formatDate(t.date) ]]</td>
-                            <td>[[ t.name ]]</td>
-                            <td>[[ t.category ]]</td>
-                            
-                            <td :class="t.type === 'INCOME' ? 'money-plus' : 'money-minus'" style="text-align: right;">
-                                [[ t.type === 'INCOME' ? '+' : '-' ]]₱[[ t.amount.toFixed(2) ]]
-                            </td>
-
-                            <td style="text-align: center;">
-                                <button class="action-btn btn-edit" @click="editTransaction(t.id)">Edit</button>
-                                <button class="action-btn btn-delete" @click="deleteTransaction(t.id)">Delete</button>
-                            </td>
-                        </tr>
-
-                        <tr v-if="filteredTransactions.length === 0">
-                            <td colspan="5" class="no-data">No transactions found for [[ targetMonth ]]</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="card card-savings">
+                <h3 style="color: var(--accent-brown)">Savings Goal</h3>
+                <div class="amount" style="color: var(--accent-brown)">₱5,000 / ₱10k</div>
             </div>
         </div>
-    </div>
 
+        <div class="recent-transactions">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 class="section-title">Transactions ([[ targetMonth ]])</h2>
+                <button class="btn-primary" @click="addNew">+ Add Transaction</button>
+            </div>
+
+            <div v-if="showForm" class="modal-backdrop" @click.self="showForm = false">
+                <div class="modal-content">
+                    <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Transaction</h3>
+                    
+                    <div class="form-group">
+                        <input type="date" v-model="newTransaction.date" required>
+                        <input type="text" v-model="newTransaction.name" placeholder="Name">
+                        
+                        <select v-model="newTransaction.category">
+                            <option disabled value="">Select Category</option>
+                            <option v-for="cat in categories" :value="cat.id">
+                                [[ cat.name ]] ([[ cat.type ]])
+                            </option>
+                        </select>
+                        
+                        <input type="number" step="0.01" v-model="newTransaction.amount" placeholder="Amount (₱)">
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-cancel" @click="showForm = false">Cancel</button>
+                        <button class="btn-primary" @click="submitTransaction">Save</button>
+                    </div>
+                </div>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th style="text-align: right;">Amount</th>
+                        <th style="text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="t in filteredTransactions" :key="t.id">
+                        <td>[[ formatDate(t.date) ]]</td>
+                        <td>[[ t.name ]]</td>
+                        <td>[[ t.category ]]</td>
+                        
+                        <td :class="t.type === 'INCOME' ? 'money-plus' : 'money-minus'" style="text-align: right;">
+                            [[ t.type === 'INCOME' ? '+' : '-' ]]₱[[ t.amount.toFixed(2) ]]
+                        </td>
+
+                        <td style="text-align: center;">
+                            <button class="action-btn btn-edit" @click="editTransaction(t.id)">Edit</button>
+                            <button class="action-btn btn-delete" @click="deleteTransaction(t.id)">Delete</button>
+                        </td>
+                    </tr>
+
+                    <tr v-if="filteredTransactions.length === 0">
+                        <td colspan="5" class="no-data">No transactions found for [[ targetMonth ]]</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
 <script>
     const { createApp } = Vue;
 
-        createApp({
-            delimiters: ['[[', ']]'],
-            data() {
-                const now = new Date();
-                const displayDate = now.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long'
-                });
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            const now = new Date();
+            const displayDate = now.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long'
+            });
 
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const filterDate = `${year}-${month}`; 
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const filterDate = `${year}-${month}`; 
 
-                return {
-                    showForm: false,
-                    targetMonth: displayDate,
-                    filterKey: filterDate,
-                    transactions: [],
-                    categories: {{ categories|safe }},
-                    newTransaction: {
-                        date: new Date().toISOString().split('T')[0],
-                        name: '',
-                        category: '',
-                        amount: ''
-                    }
+            return {
+                showForm: false,
+                targetMonth: displayDate,
+                filterKey: filterDate,
+                transactions: [],
+                // Ensure this template tag is rendered by Django before Vue sees it
+                categories: {{ categories|safe }},
+                newTransaction: {
+                    date: new Date().toISOString().split('T')[0],
+                    name: '',
+                    category: '',
+                    amount: ''
                 }
+            }
+        },
+        computed: {
+            filteredTransactions() {
+                return this.transactions.filter(t => t.date.startsWith(this.filterKey));
+            }
+        },
+        methods: {
+            addNew() {
+                this.showForm = !this.showForm;
             },
-            computed: {
-                filteredTransactions() {
-                    return this.transactions.filter(t => t.date.startsWith(this.filterKey));
-                }
+            formatDate(dateStr) {
+                const options = { year: 'numeric', month: 'short', day: '2-digit' };
+                return new Date(dateStr).toLocaleDateString('en-US', options);
             },
-            methods: {
-                addNew() {
-                    this.showForm = !this.showForm;
-                },
-                formatDate(dateStr) {
-                    const options = { year: 'numeric', month: 'short', day: '2-digit' };
-                    return new Date(dateStr).toLocaleDateString('en-US', options);
-                },
-                // editTransaction(id) {
-                //     console.log("Edit transaction", id);
-                // },
-                async deleteTransaction(id) {
-                    if(confirm("Are you sure you want to delete this transaction?")) {
-                        
-                        // 1. Get CSRF Token (Required for Django POST/DELETE requests)
-                        const csrftoken = document.cookie.split('; ')
-                            .find(row => row.startsWith('csrftoken='))
-                            ?.split('=')[1];
-
-                        try {
-                            // 2. Send DELETE request to backend
-                            const response = await fetch(`/delete-transaction/${id}/`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRFToken': csrftoken,
-                                    'Content-Type': 'application/json'
-                                }
-                            });
-
-                            // 3. If successful, remove from UI
-                            if (response.ok) {
-                                // Remove the item from the local array so the table updates instantly
-                                this.transactions = this.transactions.filter(t => t.id !== id);
-                                console.log("Transaction deleted from database");
-                            } else {
-                                alert("Failed to delete transaction.");
-                            }
-                        } catch (error) {
-                            console.error("Error deleting:", error);
-                        }
-                    }
-                },
-                async submitTransaction() {
+            async deleteTransaction(id) {
+                if(confirm("Are you sure you want to delete this transaction?")) {
                     const csrftoken = document.cookie.split('; ')
                         .find(row => row.startsWith('csrftoken='))
                         ?.split('=')[1];
 
                     try {
-                        const response = await fetch('/add-transaction/', {
-                            method: 'POST',
+                        const response = await fetch(`/delete-transaction/${id}/`, {
+                            method: 'DELETE',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': csrftoken
-                            },
-                            body: JSON.stringify(this.newTransaction)
+                                'X-CSRFToken': csrftoken,
+                                'Content-Type': 'application/json'
+                            }
                         });
 
-                        const data = await response.json();
-
                         if (response.ok) {
-                            alert('Transaction Saved!');
-                            this.fetchTransactions(); // Refresh list
-                            
-                            // Reset form name and amount (keep date/category)
-                            this.newTransaction.name = '';
-                            this.newTransaction.amount = '';
+                            this.transactions = this.transactions.filter(t => t.id !== id);
+                            console.log("Transaction deleted from database");
                         } else {
-                            console.error("Errors:", data.errors);
-                            alert("Error saving transaction. Check console.");
+                            alert("Failed to delete transaction.");
                         }
                     } catch (error) {
-                        console.error('Error:', error);
-                    }
-                },
-
-                async fetchTransactions() {
-                    try {
-                        // Call the new Django endpoint
-                        const response = await fetch('/api/transactions/');
-                        const data = await response.json();
-                        
-                        // Update the Vue data
-                        this.transactions = data;
-                    } catch (error) {
-                        console.error("Error loading transactions:", error);
+                        console.error("Error deleting:", error);
                     }
                 }
             },
-            mounted() {
-                this.fetchTransactions();
-            }
-        }).mount('#app');
-    </script>
+            async submitTransaction() {
+                const csrftoken = document.cookie.split('; ')
+                    .find(row => row.startsWith('csrftoken='))
+                    ?.split('=')[1];
 
-</body>
-</html>
+                try {
+                    const response = await fetch('/add-transaction/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify(this.newTransaction)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert('Transaction Saved!');
+                        this.fetchTransactions();
+                        this.newTransaction.name = '';
+                        this.newTransaction.amount = '';
+                        this.showForm = false; 
+                    } else {
+                        console.error("Errors:", data.errors);
+                        alert("Error saving transaction. Check console.");
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            },
+            async fetchTransactions() {
+                try {
+                    const response = await fetch('/api/transactions/');
+                    const data = await response.json();
+                    this.transactions = data;
+                } catch (error) {
+                    console.error("Error loading transactions:", error);
+                }
+            }
+        },
+        mounted() {
+            this.fetchTransactions();
+        }
+    }).mount('#app');
+</script>
+{% endblock %}

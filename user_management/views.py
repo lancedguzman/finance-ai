@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
+from .models import Profile
 from .forms import UserRegisterForm, UserUpdateForm, ProfileUpdateForm
 
 def login_view(request):
@@ -49,6 +50,8 @@ def register(request):
 @login_required(login_url='user_management:login')
 def profile(request):
     """View to display and update user profile."""
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    
     if request.method == 'POST':
         u_form = UserUpdateForm(request.POST, instance=request.user)
         # We try to get the existing profile, or create one if it doesn't exist

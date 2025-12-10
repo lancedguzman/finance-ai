@@ -1,8 +1,10 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Transaction(models.Model):
     """Transaction model to store financial transaction details."""
     transaction_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
     date = models.DateField()
     name = models.CharField(max_length=255, null=True, 
                             blank=True)
@@ -20,10 +22,16 @@ class Category(models.Model):
         ('EXPENSE', 'Expense'),
     ]
 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='categories')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     type = models.CharField(max_length=7, choices=TRANSACTION_TYPES,
                             default='EXPENSE')
+    
+    class Meta:
+        # Ensures a user cannot have two categories with the same name
+        unique_together = ('user', 'name') 
+        verbose_name_plural = "Categories"
 
     def __str__(self):
         return f"{self.name} ({self.get_type_display()})"
