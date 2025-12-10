@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'tracker',
     'scanner',
+    'user_management'
 ]
 
 MIDDLEWARE = [
