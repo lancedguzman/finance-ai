@@ -1,120 +1,72 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div id="app">
+<div id="app" v-cloak>
     <div class="container">
         
-        <div class="header-section">
-            <h1>Welcome Back, User</h1>
-            <p style="color: var(--accent-brown);">Here is your financial overview for [[ targetMonth ]].</p>
+        <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>Financial Dashboard</h1>
+                <p style="color: var(--accent-brown);">Overview for Year [[ filterKey ]]</p>
+            </div>
+            
+            <div>
+                <select v-model="filterKey" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1rem; font-weight: bold; color: var(--navy-contrast); cursor: pointer; background-color: white;">
+                    <option v-for="year in yearOptions" :value="year">
+                        Year [[ year ]]
+                    </option>
+                </select>
+            </div>
         </div>
 
         <div class="cards-grid">
             <div class="card card-balance">
-                <h3>Total Balance (Month)</h3>
-                <div class="amount">[[ formatCurrency(monthlyBalance) ]]</div>
+                <h3>Total Balance ([[ filterKey ]])</h3>
+                <div class="amount">[[ formatCurrency(yearlyBalance) ]]</div>
             </div>
             <div class="card card-income">
-                <h3 style="color: var(--text-green)">Monthly Income</h3>
-                <div class="amount" style="color: var(--text-green)">+[[ formatCurrency(monthlyIncome) ]]</div>
+                <h3 style="color: var(--text-green)">Total Income</h3>
+                <div class="amount" style="color: var(--text-green)">+[[ formatCurrency(yearlyIncome) ]]</div>
             </div>
             <div class="card card-expense">
-                <h3>Monthly Expenses</h3>
-                <div class="amount" style="color: var(--alert-red)">-[[ formatCurrency(monthlyExpense) ]]</div>
+                <h3>Total Expenses</h3>
+                <div class="amount" style="color: var(--alert-red)">-[[ formatCurrency(yearlyExpense) ]]</div>
             </div>
             <div class="card card-savings">
                 <h3 style="color: var(--accent-brown)">Savings Goal (40%)</h3>
                 <div class="amount" style="color: var(--accent-brown)">
-                    [[ formatCurrency(monthlySavings) ]] / [[ formatCurrency(savingsGoal) ]]
+                    [[ formatCurrency(yearlySavings) ]] / [[ formatCurrency(savingsGoal) ]]
                 </div>
             </div>
         </div>
 
-        <div class="recent-transactions">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2 class="section-title">Transactions ([[ targetMonth ]])</h2>
+        <div class="charts-section" style="margin-bottom: 2rem;">
+            <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                 
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-primary" style="background-color: var(--accent-brown);" @click="toggleCategoryModal">
-                        + Add Category
-                    </button>
-                    <button class="btn-primary" @click="addNew">+ Add Transaction</button>
-                </div>
-            </div>
-
-            <div v-if="showForm" class="modal-backdrop" @click.self="showForm = false">
-                <div class="modal-content">
-                    <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Transaction</h3>
-                    <div class="form-group">
-                        <input type="date" v-model="newTransaction.date" required>
-                        <input type="text" v-model="newTransaction.name" placeholder="Name">
-                        <select v-model="newTransaction.category">
-                            <option disabled value="">Select Category</option>
-                            <option v-for="cat in categories" :value="cat.id">
-                                [[ cat.name ]] ([[ cat.type ]])
-                            </option>
-                        </select>
-                        <input type="number" step="0.01" v-model="newTransaction.amount" placeholder="Amount (₱)">
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="margin-bottom: 1rem; text-align: center;">Income vs. Expense</h3>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="incomeExpenseChart"></canvas>
                     </div>
-                    <div class="modal-actions">
-                        <button class="btn-cancel" @click="showForm = false">Cancel</button>
-                        <button class="btn-primary" @click="submitTransaction">Save</button>
+                </div>
+
+                <div class="card" style="min-height: 350px;">
+                    <h3 style="margin-bottom: 1rem; text-align: center;">Expense by Category</h3>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="categoryChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div v-if="showCategoryForm" class="modal-backdrop" @click.self="showCategoryForm = false">
-                <div class="modal-content">
-                    <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Category</h3>
-                    
-                    <div class="form-group">
-                        <label style="font-size: 0.9rem; color: #666;">Category Name</label>
-                        <input type="text" v-model="newCategory.name" placeholder="e.g. Groceries, Crypto, Bonus">
-                        
-                        <label style="font-size: 0.9rem; color: #666;">Type</label>
-                        <select v-model="newCategory.type">
-                            <option value="EXPENSE">Expense</option>
-                            <option value="INCOME">Income</option>
-                        </select>
-                    </div>
-
-                    <div class="modal-actions">
-                        <button class="btn-cancel" @click="showCategoryForm = false">Cancel</button>
-                        <button class="btn-primary" @click="submitCategory">Create Category</button>
-                    </div>
+            <div class="card">
+                <h3 style="margin-bottom: 1rem;">Monthly Trend ([[ filterKey ]])</h3>
+                <div style="position: relative; height: 350px; width: 100%;">
+                    <canvas id="trendChart"></canvas>
                 </div>
             </div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th style="text-align: right;">Amount</th>
-                        <th style="text-align: center;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="t in filteredTransactions" :key="t.id">
-                        <td>[[ formatDate(t.date) ]]</td>
-                        <td>[[ t.name ]]</td>
-                        <td>[[ t.category ]]</td>
-                        <td :class="t.type === 'INCOME' ? 'money-plus' : 'money-minus'" style="text-align: right;">
-                            [[ t.type === 'INCOME' ? '+' : '-' ]]₱[[ t.amount.toFixed(2) ]]
-                        </td>
-                        <td style="text-align: center;">
-                            <button class="action-btn btn-edit" @click="editTransaction(t.id)">Edit</button>
-                            <button class="action-btn btn-delete" @click="deleteTransaction(t.id)">Delete</button>
-                        </td>
-                    </tr>
-                    <tr v-if="filteredTransactions.length === 0">
-                        <td colspan="5" class="no-data">No transactions found for [[ targetMonth ]]</td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
-    </div>
+
+        </div>
 </div>
 {% endblock %}
 
@@ -125,142 +77,180 @@
     createApp({
         delimiters: ['[[', ']]'],
         data() {
-            const now = new Date();
-            const displayDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const filterDate = `${year}-${month}`; 
+            const currentYear = new Date().getFullYear().toString();
 
             return {
-                showForm: false,        // Toggle for Transaction Modal
-                showCategoryForm: false, // Toggle for Category Modal (NEW)
-                targetMonth: displayDate,
-                filterKey: filterDate,
+                filterKey: currentYear, // Now stores "YYYY"
                 transactions: [],
-                categories: {{ categories|safe }},
+                categories: {{ categories|safe }}, // Ensure views.py passes this!
                 
-                // Transaction Form Data
-                newTransaction: {
-                    date: new Date().toISOString().split('T')[0],
-                    name: '',
-                    category: '',
-                    amount: ''
-                },
-
-                // Category Form Data (NEW)
-                newCategory: {
-                    name: '',
-                    type: 'EXPENSE' // Default to expense
+                chartInstances: {
+                    incomeExpense: null,
+                    category: null,
+                    trend: null
                 }
             }
         },
         computed: {
+            // 1. Generate Year Options (Current Year + any years found in data)
+            yearOptions() {
+                const years = new Set();
+                years.add(new Date().getFullYear().toString()); // Always add current year
+                
+                this.transactions.forEach(t => {
+                    const y = t.date.split('-')[0];
+                    years.add(y);
+                });
+                
+                // Sort descending (2025, 2024, 2023...)
+                return Array.from(years).sort().reverse();
+            },
+
+            // 2. Filter Transactions by YEAR
             filteredTransactions() {
+                // Returns transactions where date starts with "2025", etc.
                 return this.transactions.filter(t => t.date.startsWith(this.filterKey));
             },
-            monthlyIncome() {
+
+            // 3. Yearly Calculations
+            yearlyIncome() {
                 return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
             },
-            monthlyExpense() {
+            yearlyExpense() {
                 return this.filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
             },
-            monthlyBalance() {
-                return this.monthlyIncome - this.monthlyExpense;
+            yearlyBalance() {
+                return this.yearlyIncome - this.yearlyExpense;
             },
             savingsGoal() {
-                return this.monthlyIncome * 0.40;
+                return this.yearlyIncome * 0.40;
             },
-            monthlySavings() {
-                const savings = this.monthlyIncome - this.monthlyExpense;
+            yearlySavings() {
+                const savings = this.yearlyIncome - this.yearlyExpense;
                 return savings > 0 ? savings : 0;
             }
         },
+        watch: {
+            filteredTransactions: {
+                handler() {
+                    this.$nextTick(() => {
+                        this.renderCharts();
+                    });
+                },
+                deep: true
+            }
+        },
         methods: {
-            addNew() {
-                this.showForm = !this.showForm;
-            },
-            toggleCategoryModal() {
-                this.showCategoryForm = !this.showCategoryForm;
-            },
-            formatDate(dateStr) {
-                const options = { year: 'numeric', month: 'short', day: '2-digit' };
-                return new Date(dateStr).toLocaleDateString('en-US', options);
-            },
             formatCurrency(value) {
                 return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             },
             
-            // --- SUBMIT CATEGORY (NEW) ---
-            async submitCategory() {
-                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+            // --- CHART LOGIC ---
+            renderCharts() {
+                this.renderIncomeVsExpense();
+                this.renderCategoryChart();
+                this.renderTrendChart();
+            },
+
+            renderIncomeVsExpense() {
+                const ctx = document.getElementById('incomeExpenseChart');
+                if (!ctx) return;
                 
-                try {
-                    const response = await fetch('/add-category/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrftoken
-                        },
-                        body: JSON.stringify(this.newCategory)
-                    });
+                if (this.chartInstances.incomeExpense) this.chartInstances.incomeExpense.destroy();
 
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        alert('Category Created!');
-                        // Add the new category to the local list so it appears in the dropdown immediately
-                        this.categories.push(data.category);
-                        
-                        // Reset form and close
-                        this.newCategory.name = '';
-                        this.newCategory.type = 'EXPENSE';
-                        this.showCategoryForm = false;
-                    } else {
-                        alert(data.error || "Error creating category");
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
+                this.chartInstances.incomeExpense = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Income', 'Expense'],
+                        datasets: [{
+                            data: [this.yearlyIncome, this.yearlyExpense],
+                            backgroundColor: ['#2E865F', '#FF0000'], 
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
             },
 
-            // --- EXISTING METHODS ---
-            async deleteTransaction(id) {
-                if(confirm("Are you sure you want to delete this transaction?")) {
-                    const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
-                    try {
-                        const response = await fetch(`/delete-transaction/${id}/`, {
-                            method: 'DELETE',
-                            headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' }
-                        });
-                        if (response.ok) {
-                            this.transactions = this.transactions.filter(t => t.id !== id);
-                        } else {
-                            alert("Failed to delete transaction.");
+            renderCategoryChart() {
+                const ctx = document.getElementById('categoryChart');
+                if (!ctx) return;
+                if (this.chartInstances.category) this.chartInstances.category.destroy();
+
+                const expenses = this.filteredTransactions.filter(t => t.type === 'EXPENSE');
+                const categoryTotals = {};
+                
+                expenses.forEach(t => {
+                    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+                });
+
+                this.chartInstances.category = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(categoryTotals),
+                        datasets: [{
+                            data: Object.values(categoryTotals),
+                            backgroundColor: ['#288cfa', '#8d6e63', '#e0e0e0', '#f0ad4e', '#5bc0de', '#003366'],
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            },
+
+            renderTrendChart() {
+                const ctx = document.getElementById('trendChart');
+                if (!ctx) return;
+                if (this.chartInstances.trend) this.chartInstances.trend.destroy();
+
+                // 1. Setup Labels for Months
+                const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                
+                // 2. Initialize Data Buckets (12 zeros)
+                const incomeData = new Array(12).fill(0);
+                const expenseData = new Array(12).fill(0);
+
+                // 3. Aggregate Data by Month
+                this.filteredTransactions.forEach(t => {
+                    // Extract month from "2025-05-20" -> "05" -> index 4
+                    const monthIndex = parseInt(t.date.split('-')[1]) - 1; 
+                    
+                    if (t.type === 'INCOME') incomeData[monthIndex] += t.amount;
+                    else expenseData[monthIndex] += t.amount;
+                });
+
+                this.chartInstances.trend = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Income',
+                                data: incomeData,
+                                borderColor: '#2E865F',
+                                backgroundColor: 'rgba(46, 134, 95, 0.1)',
+                                fill: true,
+                                tension: 0.3
+                            },
+                            {
+                                label: 'Expense',
+                                data: expenseData,
+                                borderColor: '#FF0000',
+                                backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                                fill: true,
+                                tension: 0.3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true }
                         }
-                    } catch (error) { console.error("Error deleting:", error); }
-                }
-            },
-            async submitTransaction() {
-                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
-                try {
-                    const response = await fetch('/add-transaction/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                        body: JSON.stringify(this.newTransaction)
-                    });
-                    const data = await response.json();
-                    if (response.ok) {
-                        alert('Transaction Saved!');
-                        this.fetchTransactions();
-                        this.newTransaction.name = '';
-                        this.newTransaction.amount = '';
-                        this.showForm = false; 
-                    } else {
-                        console.error("Errors:", data.errors);
-                        alert("Error saving transaction.");
                     }
-                } catch (error) { console.error('Error:', error); }
+                });
             },
+
             async fetchTransactions() {
                 try {
                     const response = await fetch('/api/transactions/');

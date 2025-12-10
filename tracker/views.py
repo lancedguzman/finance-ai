@@ -108,11 +108,24 @@ def add_category(request):
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
 
+@login_required(login_url='user_management:login')
+def tracker(request):
+    """View to render the tracker page with breakdown of expenses and categories."""
+    # Pass categories to the frontend so Vue can list them in the dropdown
+    categories = Category.objects.filter(user=request.user)
+    cat_list = list(categories.values('id', 'name', 'type'))
+
+    context = {
+        'categories': cat_list
+    }
+
+    return render(request, 'tracker.html', context)
+
+
 @ensure_csrf_cookie
 @login_required(login_url='user_management:login') 
 def index(request):
-    """View to render the main tracker page with categories."""
-    # Pass categories to the frontend so Vue can list them in the dropdown
+    """View to render the main tracker page."""
     categories = Category.objects.filter(user=request.user)
     cat_list = list(categories.values('id', 'name', 'type'))
 
