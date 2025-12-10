@@ -28,7 +28,7 @@
         /* --- NAVIGATION --- */
         nav { background-color: var(--dark-blue); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
-        .nav-links a { color: #ccc; text-decoration: none; margin-left: 20px; transition: color 0.3s; }
+        .nav-links a, .nav-links button { color: #ccc; text-decoration: none; margin-left: 20px; transition: color 0.3s; background: none; border: none; font-size: 1rem; cursor: pointer; font-family: 'Segoe UI', sans-serif;}
         .nav-links a:hover { color: var(--primary-blue); }
 
         /* --- LAYOUT --- */
@@ -96,7 +96,6 @@
                 <a href="{% url 'scanner:scanner' %}">Scanner</a>
                 <a href="#">Telegram</a>
                 <a href="{% url 'user_management:profile' %}">Profile</a>
-                
                 <form action="{% url 'user_management:logout' %}" method="post" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit">Logout</button>
