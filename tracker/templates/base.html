@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance-AI</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* --- CSS VARIABLES --- */
@@ -93,6 +94,7 @@
         <div class="nav-links">
             {% if user.is_authenticated %}
                 <a href="{% url 'tracker:index' %}">Dashboard</a>
+                <a href="{% url 'tracker:tracker' %}">Tracker</a>
                 <a href="{% url 'scanner:scanner' %}">Scanner</a>
                 <a href="#">Telegram</a>
                 <a href="{% url 'user_management:profile' %}">Profile</a>
