@@ -1,6 +1,64 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<style>
+    /* LOCAL STYLES FOR TRACKER */
+    
+    /* Table Wrapper: Essential for Mobile */
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+        margin-top: 1rem;
+        border-radius: 8px;
+    }
+    
+    /* Force table to keep shape inside wrapper */
+    table { min-width: 600px; }
+
+    /* Header Controls */
+    .tracker-header {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        flex-wrap: wrap; /* Allows wrapping on iPhone */
+        gap: 15px;
+    }
+
+    .tracker-controls {
+        display: flex; 
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    /* Mobile specific tweaks */
+    @media (max-width: 768px) {
+        .tracker-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .tracker-title-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .tracker-controls {
+            width: 100%;
+        }
+
+        .tracker-controls button {
+            flex: 1; /* Buttons stretch to fill width */
+            justify-content: center;
+            white-space: nowrap;
+        }
+        
+        /* Stop iOS zooming on inputs */
+        input, select { font-size: 16px !important; }
+    }
+</style>
+
 <div id="app">
     <div class="container">
         
@@ -31,9 +89,9 @@
         </div>
 
         <div class="recent-transactions">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 10px;">
+            <div class="tracker-header">
                 
-                <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="tracker-title-group" style="display: flex; align-items: center; gap: 15px;">
                     <h2 class="section-title" style="margin-bottom:0; border:none;">Transactions</h2>
                     
                     <select v-model="filterKey" style="padding: 5px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; color: var(--navy-contrast); cursor: pointer;">
@@ -43,13 +101,13 @@
                     </select>
                 </div>
                 
-                <div style="display: flex; gap: 10px;">
+                <div class="tracker-controls">
                     <button class="btn-primary" style="background-color: var(--accent-brown);" @click="toggleCategoryModal">
-                        + Add Category
+                        + Cat
                     </button>
-                    <button class="btn-primary" @click="addNew">+ Add Transaction</button>
+                    <button class="btn-primary" @click="addNew">+ Add</button>
                     <button class="btn-primary" style="background-color: #0d6efd;" @click="showUploadModal = true">
-                        + Upload Transaction
+                        + Upload
                     </button>
                 </div>
             </div>
@@ -82,7 +140,7 @@
                     <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">Add New Category</h3>
                     <div class="form-group">
                         <label style="font-size: 0.9rem; color: #666;">Category Name</label>
-                        <input type="text" v-model="newCategory.name" placeholder="e.g. Groceries, Crypto, Bonus">
+                        <input type="text" v-model="newCategory.name" placeholder="e.g. Groceries">
                         <label style="font-size: 0.9rem; color: #666;">Type</label>
                         <select v-model="newCategory.type">
                             <option value="EXPENSE">Expense</option>
@@ -91,7 +149,7 @@
                     </div>
                     <div class="modal-actions">
                         <button class="btn-cancel" @click="showCategoryForm = false">Cancel</button>
-                        <button class="btn-primary" @click="submitCategory">Create Category</button>
+                        <button class="btn-primary" @click="submitCategory">Create</button>
                     </div>
                 </div>
             </div>
@@ -101,7 +159,6 @@
                     <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">
                         [[ isEditing ? 'Edit Transaction' : 'Add New Transaction' ]]
                     </h3>
-                    
                     <div class="form-group">
                         <input type="date" v-model="newTransaction.date" required>
                         <input type="text" v-model="newTransaction.name" placeholder="Name">
@@ -151,34 +208,36 @@
                 </div>
             </div>
             
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th style="text-align: right;">Amount</th>
-                        <th style="text-align: center;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="t in filteredTransactions" :key="t.id">
-                        <td>[[ formatDate(t.date) ]]</td>
-                        <td>[[ t.name ]]</td>
-                        <td>[[ t.category ]]</td>
-                        <td :class="t.type === 'INCOME' ? 'money-plus' : 'money-minus'" style="text-align: right;">
-                            [[ t.type === 'INCOME' ? '+' : '-' ]]₱[[ t.amount.toFixed(2) ]]
-                        </td>
-                        <td style="text-align: center;">
-                            <button class="action-btn btn-edit" @click="editTransaction(t.id)">Edit</button>
-                            <button class="action-btn btn-delete" @click="deleteTransaction(t.id)">Delete</button>
-                        </td>
-                    </tr>
-                    <tr v-if="filteredTransactions.length === 0">
-                        <td colspan="5" class="no-data">No transactions found for [[ targetMonth ]]</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th style="text-align: right;">Amount</th>
+                            <th style="text-align: center;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="t in filteredTransactions" :key="t.id">
+                            <td style="white-space: nowrap;">[[ formatDate(t.date) ]]</td>
+                            <td>[[ t.name ]]</td>
+                            <td>[[ t.category ]]</td>
+                            <td :class="t.type === 'INCOME' ? 'money-plus' : 'money-minus'" style="text-align: right; white-space: nowrap;">
+                                [[ t.type === 'INCOME' ? '+' : '-' ]]₱[[ t.amount.toFixed(2) ]]
+                            </td>
+                            <td style="text-align: center; white-space: nowrap;">
+                                <button class="action-btn btn-edit" @click="editTransaction(t.id)">Edit</button>
+                                <button class="action-btn btn-delete" @click="deleteTransaction(t.id)">Del</button>
+                            </td>
+                        </tr>
+                        <tr v-if="filteredTransactions.length === 0">
+                            <td colspan="5" class="no-data">No transactions found for [[ targetMonth ]]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -186,37 +245,21 @@
 
 {% block scripts %}
 <script>
+    // Existing script logic preserved exactly as is
     const { createApp } = Vue;
 
     createApp({
         delimiters: ['[[', ']]'],
         data() {
             const now = new Date();
-            // Default filterKey is current "YYYY-MM"
             const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
             return {
-                showForm: false,
-                showCategoryForm: false,
-                showUploadModal: false, // New State
-                isScanning: false,      // New State
-                uploadData: { file: null, name: '', category: '' }, // New State
-                filterKey: currentKey,
-                transactions: [],
-                categories: {{ categories|safe }},
-                isEditing: false,
-                editingId: null,
-                
-                newTransaction: {
-                    date: new Date().toISOString().split('T')[0],
-                    name: '',
-                    category: '',
-                    amount: ''
-                },
-                newCategory: {
-                    name: '',
-                    type: 'EXPENSE'
-                }
+                showForm: false, showCategoryForm: false, showUploadModal: false, isScanning: false,
+                uploadData: { file: null, name: '', category: '' }, filterKey: currentKey,
+                transactions: [], categories: {{ categories|safe }}, isEditing: false, editingId: null,
+                newTransaction: { date: new Date().toISOString().split('T')[0], name: '', category: '', amount: '' },
+                newCategory: { name: '', type: 'EXPENSE' }
             }
         },
         computed: {
@@ -248,70 +291,27 @@
                 });
                 return options.sort((a, b) => b.value.localeCompare(a.value));
             },
-            filteredTransactions() {
-                return this.transactions.filter(t => t.date.startsWith(this.filterKey));
-            },
-            monthlyIncome() {
-                return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
-            },
-            monthlyExpense() {
-                return this.filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
-            },
-            monthlyBalance() {
-                return this.monthlyIncome - this.monthlyExpense;
-            },
-            savingsGoal() {
-                return this.monthlyIncome * 0.40;
-            },
-            monthlySavings() {
-                const savings = this.monthlyIncome - this.monthlyExpense;
-                return savings > 0 ? savings : 0;
-            }
+            filteredTransactions() { return this.transactions.filter(t => t.date.startsWith(this.filterKey)); },
+            monthlyIncome() { return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0); },
+            monthlyExpense() { return this.filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0); },
+            monthlyBalance() { return this.monthlyIncome - this.monthlyExpense; },
+            savingsGoal() { return this.monthlyIncome * 0.40; },
+            monthlySavings() { const savings = this.monthlyIncome - this.monthlyExpense; return savings > 0 ? savings : 0; }
         },
         methods: {
-            addNew() { 
-                this.resetForm();
-                this.isEditing = false;
-                this.showForm = true; 
-            },
-            resetForm() {
-                this.newTransaction = {
-                    date: new Date().toISOString().split('T')[0],
-                    name: '',
-                    category: '',
-                    amount: ''
-                };
-                this.editingId = null;
-            },
-            closeForm() {
-                this.showForm = false;
-                this.resetForm();
-                this.isEditing = false;
-            },
+            addNew() { this.resetForm(); this.isEditing = false; this.showForm = true; },
+            resetForm() { this.newTransaction = { date: new Date().toISOString().split('T')[0], name: '', category: '', amount: '' }; this.editingId = null; },
+            closeForm() { this.showForm = false; this.resetForm(); this.isEditing = false; },
             editTransaction(id) {
                 const t = this.transactions.find(item => item.id === id);
                 if (t) {
-                    this.newTransaction = {
-                        date: t.date,
-                        name: t.name,
-                        category: t.category_id,
-                        amount: t.amount
-                    };
-                    this.editingId = id;
-                    this.isEditing = true;
-                    this.showForm = true;
+                    this.newTransaction = { date: t.date, name: t.name, category: t.category_id, amount: t.amount };
+                    this.editingId = id; this.isEditing = true; this.showForm = true;
                 }
             },
             toggleCategoryModal() { this.showCategoryForm = !this.showCategoryForm; },
-            formatDate(dateStr) {
-                const options = { year: 'numeric', month: 'short', day: '2-digit' };
-                return new Date(dateStr).toLocaleDateString('en-US', options);
-            },
-            formatCurrency(value) {
-                return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            },
-
-            // --- SCANNER METHODS ---
+            formatDate(dateStr) { const options = { year: 'numeric', month: 'short', day: '2-digit' }; return new Date(dateStr).toLocaleDateString('en-US', options); },
+            formatCurrency(value) { return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
             handleFileSelect(event) { this.uploadData.file = event.target.files[0]; },
             async processSmartUpload() {
                 if (!this.uploadData.file || !this.uploadData.category) { alert("Please select image and category."); return; }
@@ -324,98 +324,49 @@
                     const result = await res.json();
                     if (res.ok) {
                         this.showUploadModal = false;
-                        // Populate newTransaction form with scanned data
                         this.newTransaction = {
                             date: result.data.date || new Date().toISOString().split('T')[0],
                             name: this.uploadData.name || "Scanned Receipt",
                             category: this.uploadData.category,
                             amount: result.data.amount || ''
                         };
-                        this.showForm = true; // Open the manual form for verification
-                        this.uploadData = { file: null, name: '', category: '' };
+                        this.showForm = true; this.uploadData = { file: null, name: '', category: '' };
                         if(this.$refs.smartFileInput) this.$refs.smartFileInput.value = '';
                     } else { alert(result.error || "Scan failed."); }
-                } catch (e) { alert("Connection error."); } 
-                finally { this.isScanning = false; }
+                } catch (e) { alert("Connection error."); } finally { this.isScanning = false; }
             },
-
             async submitCategory() {
                 const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
                 try {
-                    const response = await fetch('/add-category/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                        body: JSON.stringify(this.newCategory)
-                    });
+                    const response = await fetch('/add-category/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify(this.newCategory) });
                     const data = await response.json();
-                    if (response.ok) {
-                        alert('Category Created!');
-                        this.categories.push(data.category);
-                        this.newCategory.name = '';
-                        this.showCategoryForm = false;
-                    } else {
-                        alert(data.error || "Error creating category");
-                    }
+                    if (response.ok) { alert('Category Created!'); this.categories.push(data.category); this.newCategory.name = ''; this.showCategoryForm = false; } else { alert(data.error || "Error creating category"); }
                 } catch (error) { console.error('Error:', error); }
             },
-
             async deleteTransaction(id) {
                 if(confirm("Are you sure you want to delete this transaction?")) {
                     const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
                     try {
-                        const response = await fetch(`/delete-transaction/${id}/`, {
-                            method: 'DELETE',
-                            headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' }
-                        });
-                        if (response.ok) {
-                            this.transactions = this.transactions.filter(t => t.id !== id);
-                        } else {
-                            alert("Failed to delete transaction.");
-                        }
+                        const response = await fetch(`/delete-transaction/${id}/`, { method: 'DELETE', headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' } });
+                        if (response.ok) { this.transactions = this.transactions.filter(t => t.id !== id); } else { alert("Failed to delete transaction."); }
                     } catch (error) { console.error("Error deleting:", error); }
                 }
             },
             async submitTransaction() {
                 const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
-                
-                // Determine URL and Method based on mode
-                let url = '/add-transaction/';
-                let method = 'POST';
-                
-                if (this.isEditing) {
-                    url = `/edit-transaction/${this.editingId}/`;
-                    method = 'PUT';
-                }
-
+                let url = '/add-transaction/'; let method = 'POST';
+                if (this.isEditing) { url = `/edit-transaction/${this.editingId}/`; method = 'PUT'; }
                 try {
-                    const response = await fetch(url, {
-                        method: method,
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-                        body: JSON.stringify(this.newTransaction)
-                    });
+                    const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken }, body: JSON.stringify(this.newTransaction) });
                     const data = await response.json();
-                    
-                    if (response.ok) {
-                        alert(this.isEditing ? 'Transaction Updated!' : 'Transaction Saved!');
-                        this.fetchTransactions();
-                        this.closeForm(); // Close and reset
-                    } else {
-                        console.error("Errors:", data.errors);
-                        alert("Error saving transaction.");
-                    }
+                    if (response.ok) { alert(this.isEditing ? 'Transaction Updated!' : 'Transaction Saved!'); this.fetchTransactions(); this.closeForm(); } else { console.error("Errors:", data.errors); alert("Error saving transaction."); }
                 } catch (error) { console.error('Error:', error); }
             },
             async fetchTransactions() {
-                try {
-                    const response = await fetch('/api/transactions/');
-                    const data = await response.json();
-                    this.transactions = data;
-                } catch (error) { console.error("Error loading transactions:", error); }
+                try { const response = await fetch('/api/transactions/'); const data = await response.json(); this.transactions = data; } catch (error) { console.error("Error loading transactions:", error); }
             }
         },
-        mounted() {
-            this.fetchTransactions();
-        }
+        mounted() { this.fetchTransactions(); }
     }).mount('#app');
 </script>
 {% endblock %}
