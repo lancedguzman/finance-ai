@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance-AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Finance-AI</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -22,14 +21,35 @@
             --accent-brown: #8d6e63;
             --bg-beige: #d7ccc8;
         }
+        
         /* --- GLOBAL RESET --- */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-body); color: var(--text-main); }
+        body { background-color: var(--bg-body); color: var(--text-main); -webkit-font-smoothing: antialiased; }
 
         /* --- NAVIGATION --- */
-        nav { background-color: var(--dark-blue); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; }
-        .nav-links a, .nav-links button { color: #ccc; text-decoration: none; margin-left: 20px; transition: color 0.3s; background: none; border: none; font-size: 1rem; cursor: pointer; font-family: 'Segoe UI', sans-serif;}
+        nav { 
+            background-color: var(--dark-blue); 
+            color: white; 
+            padding: 1rem 2rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .logo { font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; white-space: nowrap; }
+        
+        .nav-links { display: flex; align-items: center; }
+        .nav-links a, .nav-links button { 
+            color: #ccc; 
+            text-decoration: none; 
+            margin-left: 20px; 
+            transition: color 0.3s; 
+            background: none; 
+            border: none; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            font-family: 'Segoe UI', sans-serif;
+            padding: 5px; /* Added for better touch area */
+        }
         .nav-links a:hover { color: var(--primary-blue); }
 
         /* --- LAYOUT --- */
@@ -37,8 +57,12 @@
         .header-section { margin-bottom: 2rem; }
         .header-section h1 { color: var(--navy-contrast); }
 
-        /* --- DASHBOARD CARDS --- */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        /* --- DASHBOARD CARDS (Global) --- */
+        /* Adjusted minmax to 280px: 
+           - iPhone 11 Pro (375px) -> 1 column
+           - iPad 9th Gen (810px) -> 2 columns */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        
         .card { background: var(--card-white); padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid transparent; }
         .card-balance { border-top-color: var(--primary-blue); }
         .card-income { background-color: var(--bg-green); border-top-color: var(--text-green); }
@@ -47,7 +71,7 @@
         .card h3 { font-size: 0.9rem; text-transform: uppercase; color: #666; margin-bottom: 0.5rem; }
         .card .amount { font-size: 1.8rem; font-weight: bold; color: var(--text-main); }
 
-        /* --- TRANSACTIONS TABLE --- */
+        /* --- TRANSACTIONS TABLE (Global Styles) --- */
         .recent-transactions { background: var(--card-white); padding: 2rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .section-title { margin-bottom: 1rem; color: var(--dark-blue); border-bottom: 2px solid var(--bg-body); padding-bottom: 0.5rem; }
         
@@ -85,6 +109,46 @@
         .btn-cancel:hover { background-color: #5a6268; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .no-data { text-align: center; padding: 2rem; color: #777; font-style: italic; }
+
+        /* --- MOBILE RESPONSIVENESS (iPhone / iPad) --- */
+        @media (max-width: 768px) {
+            /* Navbar stacks vertically */
+            nav {
+                flex-direction: column;
+                gap: 15px;
+                padding: 1rem;
+            }
+            
+            .nav-links {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .nav-links a, .nav-links button {
+                margin-left: 0;
+                margin: 0 5px;
+                font-size: 0.95rem;
+                padding: 8px 12px; /* Bigger touch targets */
+                background-color: rgba(255,255,255,0.1); /* Subtle background for buttons */
+                border-radius: 4px;
+            }
+
+            /* Container spacing reduction */
+            .container {
+                margin: 1.5rem auto;
+            }
+
+            /* Reduce padding in tables/cards on mobile */
+            .recent-transactions {
+                padding: 1rem;
+            }
+            
+            th, td {
+                padding: 0.75rem 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>

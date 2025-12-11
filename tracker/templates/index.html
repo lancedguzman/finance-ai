@@ -6,9 +6,10 @@
     .modal-backdrop {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+        padding: 10px; /* Prevent touching edges on mobile */
     }
     .modal-content {
-        background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px;
+        background: white; padding: 2rem; border-radius: 12px; width: 100%; max-width: 500px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.15); animation: slideDown 0.3s ease-out;
     }
     @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -16,30 +17,59 @@
     /* Form & Button Styles */
     .form-group { margin-bottom: 1.5rem; }
     .form-group label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 600; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+    
+    /* 16px font size prevents iOS zoom on focus */
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+    
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem; }
     .btn-primary { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .btn-cancel { background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
     .btn-primary:disabled { background-color: #a0a0a0; cursor: not-allowed; }
 
-    /* Dashboard Layout */
-    .header-section { margin-bottom: 2rem; }
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-    .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-    .card h3 { font-size: 0.9rem; color: #777; margin-bottom: 0.5rem; }
-    .card .amount { font-size: 1.8rem; font-weight: bold; color: #333; }
+    /* Header & Filters */
+    .index-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 2rem;
+    }
+
+    /* Action Buttons Container */
+    .action-buttons-container {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 2rem; 
+        gap: 1rem;
+    }
+
+    /* Mobile adjustments for Index */
+    @media (max-width: 768px) {
+        .index-header { flex-direction: column; align-items: flex-start; }
+        .index-header div { width: 100%; }
+        
+        .action-buttons-container {
+            flex-direction: column;
+        }
+        
+        .action-buttons-container button {
+            width: 100%; /* Full width buttons on iPhone */
+        }
+    }
 </style>
 
 <div id="app" v-cloak>
     <div class="container">
         
-        <div class="header-section" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="index-header">
             <div>
                 <h1>Financial Dashboard</h1>
                 <p style="color: #666;">Overview for Year [[ filterKey ]]</p>
             </div>
             <div>
-                <select v-model="filterKey" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
+                <select v-model="filterKey" style="padding: 10px 15px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%;">
                     <option v-for="year in yearOptions" :value="year">Year [[ year ]]</option>
                 </select>
             </div>
@@ -65,19 +95,18 @@
             </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem;">
-            
+        <div class="action-buttons-container">
             <button class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 10px; background-color: #28a745; padding: 15px 30px; font-size: 1.1rem; flex: 1;" @click="openManualAdd">
                 <span style="font-size: 1.4rem; line-height: 1;">💲</span> Add Transaction
             </button>
 
             <button class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px 30px; font-size: 1.1rem; flex: 1;" @click="showUploadModal = true">
-                <span style="font-size: 1.4rem;">📸</span> Upload Transaction
+                <span style="font-size: 1.4rem;">📷</span> Upload Transaction
             </button>
         </div>
 
         <div class="charts-section" style="margin-bottom: 2rem;">
-            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            <div class="cards-grid">
                 <div class="card" style="min-height: 350px;">
                     <h3 style="text-align: center;">Income vs. Expense</h3>
                     <div style="position: relative; height: 280px;"><canvas id="incomeExpenseChart"></canvas></div>
@@ -87,7 +116,7 @@
                     <div style="position: relative; height: 280px;"><canvas id="categoryChart"></canvas></div>
                 </div>
             </div>
-            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 1.5rem;">
+            <div class="cards-grid" style="margin-top: 1.5rem;">
                 <div class="card" style="min-height: 350px;">
                     <h3 style="text-align: center;">Monthly Summary</h3>
                     <div style="position: relative; height: 280px;"><canvas id="monthlySummaryChart"></canvas></div>
@@ -154,15 +183,14 @@
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
 <script>
+    // Existing Vue logic remains unchanged
     const { createApp } = Vue;
     createApp({
         delimiters: ['[[', ']]'],
         data() {
             return {
                 filterKey: new Date().getFullYear().toString(),
-                transactions: [],
-                categories: [],
-                showForm: false, showUploadModal: false, isScanning: false,
+                transactions: [], categories: [], showForm: false, showUploadModal: false, isScanning: false,
                 uploadData: { file: null, name: '', category: '' },
                 newTransaction: { date: '', name: '', category: '', amount: '' },
                 chartInstances: { incomeExpense: null, category: null, trend: null, monthlySummary: null, highestExpense: null }
@@ -186,19 +214,10 @@
         },
         methods: {
             formatCurrency(val) { return '₱' + (val || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }); },
-
-            // --- NEW: Open Manual Add ---
             openManualAdd() {
-                this.newTransaction = { 
-                    date: new Date().toISOString().split('T')[0], 
-                    name: '', 
-                    category: '', 
-                    amount: '' 
-                };
+                this.newTransaction = { date: new Date().toISOString().split('T')[0], name: '', category: '', amount: '' };
                 this.showForm = true;
             },
-
-            // --- SCANNER LOGIC ---
             handleFileSelect(event) { this.uploadData.file = event.target.files[0]; },
             async processSmartUpload() {
                 if (!this.uploadData.file || !this.uploadData.category) { alert("Please select image and category."); return; }
@@ -217,15 +236,11 @@
                             category: this.uploadData.category,
                             amount: result.data.amount || ''
                         };
-                        this.showForm = true;
-                        this.uploadData = { file: null, name: '', category: '' };
+                        this.showForm = true; this.uploadData = { file: null, name: '', category: '' };
                         if(this.$refs.smartFileInput) this.$refs.smartFileInput.value = '';
                     } else { alert(result.error || "Scan failed."); }
-                } catch (e) { alert("Connection error."); } 
-                finally { this.isScanning = false; }
+                } catch (e) { alert("Connection error."); } finally { this.isScanning = false; }
             },
-
-            // --- SAVE LOGIC ---
             async submitTransaction() {
                 const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
                 try {
@@ -233,121 +248,49 @@
                     if (res.ok) { alert('Saved!'); this.showForm = false; this.fetchTransactions(); } else { alert("Error."); }
                 } catch (e) { console.error(e); }
             },
-            async fetchCategories() {
-                try {
-                    // Ensure this URL matches your Django URL pattern for categories
-                    const res = await fetch('/api/categories/'); 
-                    if (res.ok) {
-                        this.categories = await res.json();
-                    }
-                } catch (e) { 
-                    console.error("Error fetching categories:", e); 
-                }
-            },
-            async fetchTransactions() {
-                try { const res = await fetch('/api/transactions/'); this.transactions = await res.json(); } catch (e) { console.error(e); }
-            },
-
-            // --- CHARTS LOGIC ---
-            renderCharts() {
-                this.renderIncomeVsExpense();
-                this.renderCategoryChart();
-                this.renderTrendChart();
-                this.renderMonthlySummary();
-                this.renderHighestExpense();
-            },
+            async fetchCategories() { try { const res = await fetch('/api/categories/'); if (res.ok) { this.categories = await res.json(); } } catch (e) { console.error("Error fetching categories:", e); } },
+            async fetchTransactions() { try { const res = await fetch('/api/transactions/'); this.transactions = await res.json(); } catch (e) { console.error(e); } },
+            
+            renderCharts() { this.renderIncomeVsExpense(); this.renderCategoryChart(); this.renderTrendChart(); this.renderMonthlySummary(); this.renderHighestExpense(); },
+            
             renderIncomeVsExpense() {
                 const ctx = document.getElementById('incomeExpenseChart'); if (!ctx) return;
                 if (this.chartInstances.incomeExpense) this.chartInstances.incomeExpense.destroy();
-                this.chartInstances.incomeExpense = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: { labels: ['Income', 'Expense'], datasets: [{ data: [this.yearlyIncome, this.yearlyExpense], backgroundColor: ['#28a745', '#dc3545'] }] },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
+                this.chartInstances.incomeExpense = new Chart(ctx, { type: 'doughnut', data: { labels: ['Income', 'Expense'], datasets: [{ data: [this.yearlyIncome, this.yearlyExpense], backgroundColor: ['#28a745', '#dc3545'] }] }, options: { responsive: true, maintainAspectRatio: false } });
             },
             renderCategoryChart() {
                 const ctx = document.getElementById('categoryChart'); if (!ctx) return;
                 if (this.chartInstances.category) this.chartInstances.category.destroy();
                 const expenses = this.filteredTransactions.filter(t => t.type === 'EXPENSE');
                 const catTotals = {}; expenses.forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
-                this.chartInstances.category = new Chart(ctx, {
-                    type: 'pie',
-                    data: { labels: Object.keys(catTotals), datasets: [{ data: Object.values(catTotals), backgroundColor: ['#007bff', '#6610f2', '#6f42c1', '#e83e8c', '#fd7e14'] }] },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
+                this.chartInstances.category = new Chart(ctx, { type: 'pie', data: { labels: Object.keys(catTotals), datasets: [{ data: Object.values(catTotals), backgroundColor: ['#007bff', '#6610f2', '#6f42c1', '#e83e8c', '#fd7e14'] }] }, options: { responsive: true, maintainAspectRatio: false } });
             },
             renderTrendChart() {
                 const ctx = document.getElementById('trendChart'); if (!ctx) return;
                 if (this.chartInstances.trend) this.chartInstances.trend.destroy();
                 const incomeData = new Array(12).fill(0); const expenseData = new Array(12).fill(0);
-                this.filteredTransactions.forEach(t => {
-                    const m = parseInt(t.date.split('-')[1]) - 1;
-                    if (t.type === 'INCOME') incomeData[m] += t.amount; else expenseData[m] += t.amount;
-                });
-                this.chartInstances.trend = new Chart(ctx, {
-                    type: 'line',
-                    data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [
-                        { label: 'Income', data: incomeData, borderColor: '#28a745', fill: false },
-                        { label: 'Expense', data: expenseData, borderColor: '#dc3545', fill: false }
-                    ]},
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
+                this.filteredTransactions.forEach(t => { const m = parseInt(t.date.split('-')[1]) - 1; if (t.type === 'INCOME') incomeData[m] += t.amount; else expenseData[m] += t.amount; });
+                this.chartInstances.trend = new Chart(ctx, { type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [{ label: 'Income', data: incomeData, borderColor: '#28a745', fill: false }, { label: 'Expense', data: expenseData, borderColor: '#dc3545', fill: false }] }, options: { responsive: true, maintainAspectRatio: false } });
             },
             renderMonthlySummary() {
                 const ctx = document.getElementById('monthlySummaryChart'); if (!ctx) return;
                 if (this.chartInstances.monthlySummary) this.chartInstances.monthlySummary.destroy();
                 const incomeData = new Array(12).fill(0); const expenseData = new Array(12).fill(0);
-                this.filteredTransactions.forEach(t => {
-                    const m = parseInt(t.date.split('-')[1]) - 1;
-                    if (t.type === 'INCOME') incomeData[m] += t.amount; else expenseData[m] += t.amount;
-                });
+                this.filteredTransactions.forEach(t => { const m = parseInt(t.date.split('-')[1]) - 1; if (t.type === 'INCOME') incomeData[m] += t.amount; else expenseData[m] += t.amount; });
                 const savingsData = incomeData.map((inc, i) => Math.max(0, inc - expenseData[i]));
-                this.chartInstances.monthlySummary = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-                        datasets: [
-                            { label: 'Income', data: incomeData, backgroundColor: '#28a745' },
-                            { label: 'Expense', data: expenseData, backgroundColor: '#dc3545' },
-                            { label: 'Savings', data: savingsData, backgroundColor: '#fd7e14' }
-                        ]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
+                this.chartInstances.monthlySummary = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [{ label: 'Income', data: incomeData, backgroundColor: '#28a745' }, { label: 'Expense', data: expenseData, backgroundColor: '#dc3545' }, { label: 'Savings', data: savingsData, backgroundColor: '#fd7e14' }] }, options: { responsive: true, maintainAspectRatio: false } });
             },
             renderHighestExpense() {
                 const ctx = document.getElementById('highestExpenseChart'); if (!ctx) return;
                 if (this.chartInstances.highestExpense) this.chartInstances.highestExpense.destroy();
                 const monthlyMax = Array.from({ length: 12 }, () => ({ max: 0, category: 'N/A' }));
                 const monthlyCategoryTotals = Array.from({ length: 12 }, () => ({}));
-                this.filteredTransactions.forEach(t => {
-                    if (t.type === 'EXPENSE') {
-                        const m = parseInt(t.date.split('-')[1]) - 1;
-                        monthlyCategoryTotals[m][t.category] = (monthlyCategoryTotals[m][t.category] || 0) + t.amount;
-                    }
-                });
-                monthlyCategoryTotals.forEach((cats, m) => {
-                    for (const [cat, amt] of Object.entries(cats)) {
-                        if (amt > monthlyMax[m].max) monthlyMax[m] = { max: amt, category: cat };
-                    }
-                });
-                this.chartInstances.highestExpense = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-                        datasets: [{ label: 'Highest Expense', data: monthlyMax.map(m => m.max), backgroundColor: '#007bff' }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        plugins: { tooltip: { callbacks: { afterLabel: (c) => 'Category: ' + monthlyMax[c.dataIndex].category } } }
-                    }
-                });
+                this.filteredTransactions.forEach(t => { if (t.type === 'EXPENSE') { const m = parseInt(t.date.split('-')[1]) - 1; monthlyCategoryTotals[m][t.category] = (monthlyCategoryTotals[m][t.category] || 0) + t.amount; } });
+                monthlyCategoryTotals.forEach((cats, m) => { for (const [cat, amt] of Object.entries(cats)) { if (amt > monthlyMax[m].max) monthlyMax[m] = { max: amt, category: cat }; } });
+                this.chartInstances.highestExpense = new Chart(ctx, { type: 'bar', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [{ label: 'Highest Expense', data: monthlyMax.map(m => m.max), backgroundColor: '#007bff' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { callbacks: { afterLabel: (c) => 'Category: ' + monthlyMax[c.dataIndex].category } } } } });
             }
         },
-        mounted() { 
-            this.fetchTransactions();
-            this.fetchCategories(); 
-        }
+        mounted() { this.fetchTransactions(); this.fetchCategories(); }
     }).mount('#app');
 </script>
 {% endblock %}
