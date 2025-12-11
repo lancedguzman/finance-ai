@@ -7,7 +7,8 @@ class ProfileInline(admin.StackedInline):
     """Creates the Profile Admin Panel."""
     model = Profile
     can_delete = False
-    fields = ["display_name", "email_address",]
+    fields = ["user", "display_name",
+              "email_address", "telegram_chat_id"]
 
 
 class UserAdmin(BaseUserAdmin):
