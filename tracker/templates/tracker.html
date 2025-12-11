@@ -48,6 +48,9 @@
                         + Add Category
                     </button>
                     <button class="btn-primary" @click="addNew">+ Add Transaction</button>
+                    <button class="btn-primary" style="background-color: #0d6efd;" @click="showUploadModal = true">
+                        + Upload Transaction
+                    </button>
                 </div>
             </div>
 
@@ -89,6 +92,61 @@
                     <div class="modal-actions">
                         <button class="btn-cancel" @click="showCategoryForm = false">Cancel</button>
                         <button class="btn-primary" @click="submitCategory">Create Category</button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="showForm" class="modal-backdrop" @click.self="closeForm">
+                <div class="modal-content">
+                    <h3 style="margin-bottom: 15px; color: var(--navy-contrast);">
+                        [[ isEditing ? 'Edit Transaction' : 'Add New Transaction' ]]
+                    </h3>
+                    
+                    <div class="form-group">
+                        <input type="date" v-model="newTransaction.date" required>
+                        <input type="text" v-model="newTransaction.name" placeholder="Name">
+                        <select v-model="newTransaction.category">
+                            <option disabled value="">Select Category</option>
+                            <option v-for="cat in categories" :value="cat.id">
+                                [[ cat.name ]] ([[ cat.type ]])
+                            </option>
+                        </select>
+                        <input type="number" step="0.01" v-model="newTransaction.amount" placeholder="Amount (₱)">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-cancel" @click="closeForm">Cancel</button>
+                        <button class="btn-primary" @click="submitTransaction">
+                            [[ isEditing ? 'Update' : 'Save' ]]
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="showUploadModal" class="modal-backdrop" @click.self="showUploadModal = false">
+                <div class="modal-content">
+                    <h3 style="margin-bottom: 1rem;">Upload Receipt</h3>
+                    <div class="form-group">
+                        <label>1. Select Image</label>
+                        <input type="file" ref="smartFileInput" accept="image/*" @change="handleFileSelect">
+                    </div>
+                    <div class="form-group">
+                        <label>2. Name</label>
+                        <input type="text" v-model="uploadData.name" placeholder="e.g. Coffee">
+                    </div>
+                    <div class="form-group">
+                        <label>3. Category</label>
+                        <select v-model="uploadData.category">
+                            <option disabled value="">Select Category</option>
+                            <option v-for="cat in categories" :value="cat.id">
+                                [[ cat.name ]] ([[ cat.type ]])
+                            </option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-cancel" @click="showUploadModal = false">Cancel</button>
+                        <button class="btn-primary" @click="processSmartUpload" :disabled="isScanning">
+                            [[ isScanning ? 'Scanning...' : 'Next' ]]
+                        </button>
                     </div>
                 </div>
             </div>
@@ -140,9 +198,14 @@
             return {
                 showForm: false,
                 showCategoryForm: false,
-                filterKey: currentKey, // Controls the dropdown
+                showUploadModal: false, // New State
+                isScanning: false,      // New State
+                uploadData: { file: null, name: '', category: '' }, // New State
+                filterKey: currentKey,
                 transactions: [],
                 categories: {{ categories|safe }},
+                isEditing: false,
+                editingId: null,
                 
                 newTransaction: {
                     date: new Date().toISOString().split('T')[0],
@@ -157,20 +220,15 @@
             }
         },
         computed: {
-            // 1. Dynamic Month Label (e.g., "December 2025")
             targetMonth() {
                 if (!this.filterKey) return '';
                 const [year, month] = this.filterKey.split('-');
                 const date = new Date(year, month - 1);
                 return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             },
-
-            // 2. Generate Dropdown Options (Past 12 months + Next 12 months + Transaction months)
             monthOptions() {
                 const options = [];
                 const now = new Date();
-                
-                // Add range: 12 months back and 12 months forward
                 for (let i = -12; i <= 12; i++) {
                     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
                     const y = d.getFullYear();
@@ -179,10 +237,8 @@
                     const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                     options.push({ value: key, label: label });
                 }
-
-                // Add any months from transactions that are outside the range
                 this.transactions.forEach(t => {
-                    const key = t.date.substring(0, 7); // YYYY-MM
+                    const key = t.date.substring(0, 7);
                     if (!options.find(o => o.value === key)) {
                         const [y, m] = key.split('-');
                         const d = new Date(y, m - 1);
@@ -190,17 +246,11 @@
                         options.push({ value: key, label: label });
                     }
                 });
-
-                // Sort descending (Newest first)
                 return options.sort((a, b) => b.value.localeCompare(a.value));
             },
-
-            // 3. Filter Transactions based on Dropdown
             filteredTransactions() {
                 return this.transactions.filter(t => t.date.startsWith(this.filterKey));
             },
-
-            // 4. Calculations (Automatically update based on filteredTransactions)
             monthlyIncome() {
                 return this.filteredTransactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
             },
@@ -219,15 +269,74 @@
             }
         },
         methods: {
-            addNew() { this.showForm = !this.showForm; },
+            addNew() { 
+                this.resetForm();
+                this.isEditing = false;
+                this.showForm = true; 
+            },
+            resetForm() {
+                this.newTransaction = {
+                    date: new Date().toISOString().split('T')[0],
+                    name: '',
+                    category: '',
+                    amount: ''
+                };
+                this.editingId = null;
+            },
+            closeForm() {
+                this.showForm = false;
+                this.resetForm();
+                this.isEditing = false;
+            },
+            editTransaction(id) {
+                const t = this.transactions.find(item => item.id === id);
+                if (t) {
+                    this.newTransaction = {
+                        date: t.date,
+                        name: t.name,
+                        category: t.category_id,
+                        amount: t.amount
+                    };
+                    this.editingId = id;
+                    this.isEditing = true;
+                    this.showForm = true;
+                }
+            },
             toggleCategoryModal() { this.showCategoryForm = !this.showCategoryForm; },
-            
             formatDate(dateStr) {
                 const options = { year: 'numeric', month: 'short', day: '2-digit' };
                 return new Date(dateStr).toLocaleDateString('en-US', options);
             },
             formatCurrency(value) {
                 return '₱' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+
+            // --- SCANNER METHODS ---
+            handleFileSelect(event) { this.uploadData.file = event.target.files[0]; },
+            async processSmartUpload() {
+                if (!this.uploadData.file || !this.uploadData.category) { alert("Please select image and category."); return; }
+                this.isScanning = true;
+                const formData = new FormData();
+                formData.append('receipt_image', this.uploadData.file);
+                const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                try {
+                    const res = await fetch('/scanner/api/process/', { method: 'POST', headers: { 'X-CSRFToken': csrftoken }, body: formData });
+                    const result = await res.json();
+                    if (res.ok) {
+                        this.showUploadModal = false;
+                        // Populate newTransaction form with scanned data
+                        this.newTransaction = {
+                            date: result.data.date || new Date().toISOString().split('T')[0],
+                            name: this.uploadData.name || "Scanned Receipt",
+                            category: this.uploadData.category,
+                            amount: result.data.amount || ''
+                        };
+                        this.showForm = true; // Open the manual form for verification
+                        this.uploadData = { file: null, name: '', category: '' };
+                        if(this.$refs.smartFileInput) this.$refs.smartFileInput.value = '';
+                    } else { alert(result.error || "Scan failed."); }
+                } catch (e) { alert("Connection error."); } 
+                finally { this.isScanning = false; }
             },
 
             async submitCategory() {
@@ -268,19 +377,28 @@
             },
             async submitTransaction() {
                 const csrftoken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+                
+                // Determine URL and Method based on mode
+                let url = '/add-transaction/';
+                let method = 'POST';
+                
+                if (this.isEditing) {
+                    url = `/edit-transaction/${this.editingId}/`;
+                    method = 'PUT';
+                }
+
                 try {
-                    const response = await fetch('/add-transaction/', {
-                        method: 'POST',
+                    const response = await fetch(url, {
+                        method: method,
                         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
                         body: JSON.stringify(this.newTransaction)
                     });
                     const data = await response.json();
+                    
                     if (response.ok) {
-                        alert('Transaction Saved!');
+                        alert(this.isEditing ? 'Transaction Updated!' : 'Transaction Saved!');
                         this.fetchTransactions();
-                        this.newTransaction.name = '';
-                        this.newTransaction.amount = '';
-                        this.showForm = false; 
+                        this.closeForm(); // Close and reset
                     } else {
                         console.error("Errors:", data.errors);
                         alert("Error saving transaction.");

@@ -21,6 +21,7 @@ def transaction_list(request):
             'name': t.name,
             'amount': float(t.amount),
             'category': t.category.name,
+            'category_id': t.category.id,
             'type': t.category.type, 
         })
         
@@ -54,6 +55,32 @@ def add_transaction(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
     
+    return JsonResponse({'error': 'Invalid method'}, status=405)
+
+
+@login_required(login_url='user_management:login')
+def edit_transaction(request, id):
+    """View to update an existing transaction via JSON."""
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body)
+            transaction = Transaction.objects.get(transaction_id=id, user=request.user)
+            
+            # Update fields manually or use a Form
+            # Using manual update for simplicity since we parsed JSON
+            form = TransactionForm(data, instance=transaction)
+            
+            if form.is_valid():
+                form.save()
+                return JsonResponse({'message': 'Updated successfully'})
+            else:
+                return JsonResponse({'errors': form.errors}, status=400)
+                
+        except Transaction.DoesNotExist:
+            return JsonResponse({'error': 'Transaction not found'}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
 

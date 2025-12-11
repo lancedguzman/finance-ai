@@ -65,14 +65,14 @@
             </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem;">
             
-            <button class="btn-primary" style="display: flex; align-items: center; gap: 8px; background-color: #28a745;" @click="openManualAdd">
-                <span style="font-size: 1.2rem; line-height: 1;">+</span> Add Transaction
+            <button class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 10px; background-color: #28a745; padding: 15px 30px; font-size: 1.1rem; flex: 1;" @click="openManualAdd">
+                <span style="font-size: 1.4rem; line-height: 1;">💲</span> Add Transaction
             </button>
 
-            <button class="btn-primary" style="display: flex; align-items: center; gap: 8px;" @click="showUploadModal = true">
-                <span>📸</span> Upload Transaction
+            <button class="btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px 30px; font-size: 1.1rem; flex: 1;" @click="showUploadModal = true">
+                <span style="font-size: 1.4rem;">📸</span> Upload Transaction
             </button>
         </div>
 
@@ -161,7 +161,7 @@
             return {
                 filterKey: new Date().getFullYear().toString(),
                 transactions: [],
-                categories: {{ categories|safe }},
+                categories: [],
                 showForm: false, showUploadModal: false, isScanning: false,
                 uploadData: { file: null, name: '', category: '' },
                 newTransaction: { date: '', name: '', category: '', amount: '' },
