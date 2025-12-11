@@ -233,6 +233,17 @@
                     if (res.ok) { alert('Saved!'); this.showForm = false; this.fetchTransactions(); } else { alert("Error."); }
                 } catch (e) { console.error(e); }
             },
+            async fetchCategories() {
+                try {
+                    // Ensure this URL matches your Django URL pattern for categories
+                    const res = await fetch('/api/categories/'); 
+                    if (res.ok) {
+                        this.categories = await res.json();
+                    }
+                } catch (e) { 
+                    console.error("Error fetching categories:", e); 
+                }
+            },
             async fetchTransactions() {
                 try { const res = await fetch('/api/transactions/'); this.transactions = await res.json(); } catch (e) { console.error(e); }
             },
@@ -333,7 +344,10 @@
                 });
             }
         },
-        mounted() { this.fetchTransactions(); }
+        mounted() { 
+            this.fetchTransactions();
+            this.fetchCategories(); 
+        }
     }).mount('#app');
 </script>
 {% endblock %}

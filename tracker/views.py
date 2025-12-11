@@ -8,6 +8,18 @@ from .forms import TransactionForm
 import json
 
 @login_required(login_url='user_management:login')
+def category_list(request):
+    """View to list all categories as JSON for the frontend."""
+    # Get categories for the current user
+    categories = Category.objects.filter(user=request.user)
+    
+    # Convert QuerySet to a list of dictionaries
+    data = list(categories.values('id', 'name', 'type'))
+    
+    return JsonResponse(data, safe=False)
+
+
+@login_required(login_url='user_management:login')
 def transaction_list(request):
     """View all transactions as JSON for Vue frontend."""
     # Get all transactions, newest first
